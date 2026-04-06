@@ -1,0 +1,21 @@
+Act as Backend Engineer.
+
+Use FastAPI.
+
+Build:
+
+* Auth APIs
+* Resume APIs
+* ATS APIs
+* Interview APIs
+
+Use:
+
+* PostgreSQL
+* Celery
+* Redis
+
+Ensure:
+
+* Scalable design
+* Secure endpoints

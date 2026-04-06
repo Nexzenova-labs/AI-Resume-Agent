@@ -1,0 +1,14 @@
+Act as Web Scraping Engineer.
+
+Use:
+
+* Playwright
+* BeautifulSoup
+
+Extract:
+
+* Job title
+* Skills
+* Description
+
+Clean and normalize data.

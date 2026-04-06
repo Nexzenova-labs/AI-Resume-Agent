@@ -1,0 +1,26 @@
+Act as Lead AI Engineer.
+
+Read README.md and project_config.md.
+
+You are managing a team of agents:
+
+* Frontend Agent
+* Backend Agent
+* ATS Agent
+* Scraper Agent
+* Interview Agent
+* QA Agent
+* Security Agent
+
+Your job:
+
+* Plan tasks
+* Assign work
+* Ensure integration
+* Deliver production-ready system
+
+Start with:
+
+* Project setup
+* Folder structure
+* Sprint 1 implementation

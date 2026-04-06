@@ -1,0 +1,45 @@
+# 🔐 Project Config (DO NOT COMMIT SECRETS)
+
+## Environment Variables
+
+DATABASE_URL=
+REDIS_URL=
+CHROMADB_PATH=
+
+OPENAI_API_KEY=
+LLM_PROVIDER=openai
+
+S3_BUCKET=
+S3_ACCESS_KEY=
+S3_SECRET_KEY=
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+LINKEDIN_CLIENT_ID=
+LINKEDIN_CLIENT_SECRET=
+
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+
+---
+
+## Feature Flags
+
+ENABLE_VOICE_INTERVIEW=false
+ENABLE_GITHUB_ANALYSIS=false
+
+---
+
+## Modes
+
+ALLOW_GUEST=true
+SESSION_TTL=24h
+
+---
+
+## Notes
+
+* Guest mode = no saved data
+* Persistent users = full storage
+* Switch LLM_PROVIDER to local if needed

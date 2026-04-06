@@ -1,0 +1,13 @@
+Act as NLP Engineer.
+
+Build ATS scoring system:
+
+* Keyword match
+* Embedding similarity
+* Experience validation
+
+Output:
+
+* Score
+* Missing skills
+* Suggestions
