@@ -42,3 +42,36 @@ class AtsAnalysisResponse(BaseModel):
     improvement_suggestions: list[str]
     resume_snapshot: Union[ResumeResponse, ResumeCreate]
     scraped_job: Optional[JobScrapeResponse] = None
+
+
+# ── Resume quality score (no JD required) ─────────────────────────────────────
+
+class ResumeQualityRequest(BaseModel):
+    resume_id: Optional[str] = None
+    resume: Optional[ResumeCreate] = None
+
+    @model_validator(mode="after")
+    def validate_inputs(self) -> "ResumeQualityRequest":
+        if self.resume_id is not None:
+            self.resume_id = self.resume_id.strip() or None
+        if not self.resume_id and not self.resume:
+            raise ValueError("Provide resume_id or a resume payload.")
+        return self
+
+
+class SectionQuality(BaseModel):
+    score: int = Field(ge=0, le=100)
+    max_score: int
+    present: bool
+    notes: list[str] = Field(default_factory=list)
+
+
+class ResumeQualityResponse(BaseModel):
+    overall_score: int = Field(ge=0, le=100)
+    grade: str                          # A / B / C / D / F
+    completeness_score: int = Field(ge=0, le=100)
+    keyword_richness_score: int = Field(ge=0, le=100)
+    section_breakdown: dict[str, SectionQuality]
+    detected_skills: list[str]
+    missing_recommended_sections: list[str]
+    tips: list[str]

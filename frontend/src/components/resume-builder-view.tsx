@@ -146,6 +146,11 @@ export function ResumeBuilderView() {
     event.preventDefault();
     setStatusMessage(null);
 
+    if (!formState.title?.trim()) {
+      setStatusMessage("Please enter a resume title before saving.");
+      return;
+    }
+
     const payload: ResumePayload = {
       ...formState,
       status: isDraft ? "draft" : "active",
@@ -158,15 +163,18 @@ export function ResumeBuilderView() {
     try {
       await saveResume(payload);
       if (!isDraft) {
-         localStorage.removeItem("resumeBuilderDraft");
-         router.push("/resume/editor");
+        localStorage.removeItem("resumeBuilderDraft");
+        router.push("/resume/editor");
       } else {
-         setStatusMessage(
-           resumeId ? "Resume updated successfully." : "Resume created successfully.",
-         );
+        setStatusMessage(
+          resumeId ? "Resume updated successfully." : "Draft saved successfully.",
+        );
       }
-    } catch {
-      return;
+    } catch (err) {
+      // error is also set in resume context and shown below, but surface it here too
+      setStatusMessage(
+        err instanceof Error ? err.message : "Failed to save resume. Check that the backend is running.",
+      );
     }
   };
 
@@ -190,6 +198,18 @@ export function ResumeBuilderView() {
                 ? "Editing the active resume synced from the backend."
                 : "Create your first resume and the id will be cached locally for future loads."}
           </p>
+
+          {/* Show errors/status at the top so they're always visible */}
+          {(error || statusMessage) && (
+            <div className={`mt-2 rounded-[1.2rem] border px-4 py-3 text-sm ${
+              error
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+            }`}>
+              {error || statusMessage}
+            </div>
+          )}
+
           {!resume && (
             <div className="mt-4">
               <label 
@@ -626,18 +646,6 @@ export function ResumeBuilderView() {
               </div>
             ))}
           </div>
-
-          {error ? (
-            <div className="rounded-[1.2rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {error}
-            </div>
-          ) : null}
-
-          {statusMessage ? (
-            <div className="rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              {statusMessage}
-            </div>
-          ) : null}
 
           <div className="flex flex-wrap gap-3">
             <button

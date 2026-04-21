@@ -36,6 +36,15 @@ async def answer_interview_question(
     return await InterviewService(session).answer_question(payload=payload, user=current_user)
 
 
+@router.get("/feedback", response_model=InterviewResultResponse)
+async def get_interview_feedback(
+    session_id: str,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> InterviewResultResponse:
+    return await InterviewService(session).get_session_feedback(session_id=session_id, user=current_user)
+
+
 @router.get("/result", response_model=InterviewResultResponse)
 async def get_interview_result(
     session_id: str,

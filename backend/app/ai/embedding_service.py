@@ -1,3 +1,12 @@
+"""Embedding service with two providers:
+
+- LocalEmbeddingProvider  : TF-IDF bag-of-words (no external calls required).
+  Cosine similarity of TF-IDF vectors is a well-understood measure of lexical
+  overlap and works reliably for ATS keyword matching without any API keys.
+- OpenAIEmbeddingProvider : dense semantic embeddings via OpenAI API, with
+  automatic fallback to the local provider when the key is absent or the call
+  fails.
+"""
 from __future__ import annotations
 
 import math
@@ -12,29 +21,72 @@ settings = get_settings()
 
 
 class LocalEmbeddingProvider:
-    def __init__(self, *, dimensions: int = 256) -> None:
-        self.dimensions = dimensions
+    """TF-IDF bag-of-words embeddings.
+
+    Builds a shared vocabulary across ALL input texts in a single batch, then
+    produces a normalised TF-IDF vector for each text.  Cosine similarity on
+    these vectors is fully deterministic and meaningful: two texts that share
+    many of the same tokens will score high; completely unrelated texts will
+    score near zero.
+    """
+
+    def __init__(self) -> None:
         self.normalizer = TermNormalizer()
 
     async def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        return [self._embed_text(text) for text in texts]
+        return self._tfidf_batch(texts)
 
-    def _embed_text(self, text: str) -> list[float]:
-        tokens = self.normalizer.normalize_tokens(text)
-        if not tokens:
-            return [0.0] * self.dimensions
+    # ------------------------------------------------------------------
+    # Internal
+    # ------------------------------------------------------------------
 
-        vector = [0.0] * self.dimensions
-        counts = Counter(tokens)
-        for token, weight in counts.items():
-            index = hash(token) % self.dimensions
-            sign = 1.0 if hash(f"{token}:sign") % 2 == 0 else -1.0
-            vector[index] += weight * sign
+    def _tokenize(self, text: str) -> list[str]:
+        return [t for t in self.normalizer.normalize_tokens(text) if len(t) > 1]
 
-        magnitude = math.sqrt(sum(value * value for value in vector))
-        if magnitude == 0:
-            return vector
-        return [value / magnitude for value in vector]
+    def _tfidf_batch(self, texts: list[str]) -> list[list[float]]:
+        tokenized: list[list[str]] = [self._tokenize(t) for t in texts]
+        num_docs = len(tokenized)
+
+        # Build global vocabulary
+        vocab: list[str] = list({tok for doc in tokenized for tok in doc})
+        vocab_index: dict[str, int] = {tok: i for i, tok in enumerate(vocab)}
+        vocab_size = len(vocab)
+
+        if vocab_size == 0:
+            return [[0.0] for _ in texts]
+
+        # Document-frequency: how many docs contain each token
+        df: Counter[str] = Counter()
+        for doc_tokens in tokenized:
+            df.update(set(doc_tokens))
+
+        embeddings: list[list[float]] = []
+        for doc_tokens in tokenized:
+            vector = [0.0] * vocab_size
+            if not doc_tokens:
+                embeddings.append(vector)
+                continue
+
+            tf = Counter(doc_tokens)
+            doc_len = len(doc_tokens)
+
+            for token, count in tf.items():
+                if token not in vocab_index:
+                    continue
+                idx = vocab_index[token]
+                # Normalised TF × log IDF
+                tf_val = count / doc_len
+                idf_val = math.log((num_docs + 1) / (df[token] + 1)) + 1.0
+                vector[idx] = tf_val * idf_val
+
+            # L2 normalise
+            magnitude = math.sqrt(sum(v * v for v in vector))
+            if magnitude > 0:
+                vector = [v / magnitude for v in vector]
+
+            embeddings.append(vector)
+
+        return embeddings
 
 
 class OpenAIEmbeddingProvider:
@@ -73,9 +125,7 @@ class OpenAIEmbeddingProvider:
 
 class EmbeddingService:
     def __init__(self) -> None:
-        self.local_provider = LocalEmbeddingProvider(
-            dimensions=settings.embedding_dimensions
-        )
+        self.local_provider = LocalEmbeddingProvider()
         self.openai_provider = OpenAIEmbeddingProvider(
             fallback_provider=self.local_provider
         )
@@ -85,4 +135,3 @@ class EmbeddingService:
         if provider == "openai":
             return await self.openai_provider.embed_texts(texts)
         return await self.local_provider.embed_texts(texts)
-

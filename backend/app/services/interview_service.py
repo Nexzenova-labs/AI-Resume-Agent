@@ -137,6 +137,38 @@ class InterviewService:
             is_complete=is_complete,
         )
 
+    async def get_session_feedback(
+        self,
+        *,
+        session_id: str,
+        user: User,
+    ) -> InterviewResultResponse:
+        """Get feedback for an in-progress interview session."""
+        interview_session = await self._get_session(session_id=session_id, user=user)
+        resume_snapshot = self._parse_resume_snapshot(interview_session.resume_snapshot)
+
+        # Calculate partial performance metrics for in-progress sessions
+        if interview_session.answers:
+            strengths, weak_areas = self._summarize_performance(interview_session.answers)
+            partial_score = self._compute_total_score(interview_session.answers)
+        else:
+            strengths = []
+            weak_areas = []
+            partial_score = 0
+
+        return InterviewResultResponse(
+            session_id=interview_session.id,
+            difficulty=interview_session.difficulty,
+            question_count=interview_session.question_count,
+            status=interview_session.status,
+            total_score=partial_score,
+            strengths=strengths,
+            weak_areas=weak_areas,
+            answered_questions=len(interview_session.answers),
+            resume_snapshot=resume_snapshot,
+        )
+
+
     async def get_result(
         self,
         *,

@@ -106,6 +106,24 @@ export type AtsAnalysisResult = {
   scraped_job?: JobScrapeResult | null;
 };
 
+export type SectionQuality = {
+  score: number;
+  max_score: number;
+  present: boolean;
+  notes: string[];
+};
+
+export type ResumeQualityResult = {
+  overall_score: number;
+  grade: string;
+  completeness_score: number;
+  keyword_richness_score: number;
+  section_breakdown: Record<string, SectionQuality>;
+  detected_skills: string[];
+  missing_recommended_sections: string[];
+  tips: string[];
+};
+
 export type InterviewDifficulty = "easy" | "medium" | "hard";
 export type InterviewQuestionCount = 10 | 20 | 30 | 40 | 50;
 export type InterviewQuestionType = "mcq" | "short_answer";
