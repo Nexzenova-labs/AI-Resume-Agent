@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 
 import { useAuth } from "@/components/providers/auth-provider";
 import { useResume } from "@/components/providers/resume-provider";
+import { resumeService } from "@/services/resume-service";
 
 type NavItem = {
   href: string;
@@ -17,9 +18,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", short: "DB", accent: "from-cyan-400 to-blue-500" },
-  { href: "/resume", label: "Resume", short: "RS", accent: "from-emerald-400 to-teal-500" },
-  { href: "/ats", label: "ATS", short: "AT", accent: "from-orange-400 to-amber-500" },
-  { href: "/interview", label: "Interview", short: "IV", accent: "from-fuchsia-400 to-rose-500" },
+  { href: "/jd-apply", label: "JD Apply", short: "JA", accent: "from-indigo-400 to-violet-500" },
 ];
 
 function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
@@ -150,11 +149,27 @@ export function AppShell({
                 </div>
                 <button
                   type="button"
+                  onClick={() => router.push("/dashboard?tab=resume&mode=vault")}
+                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm"
+                >
+                  📂 View Resumes
+                </button>
+                {resume && (
+                  <button
+                    type="button"
+                    onClick={() => resumeService.downloadAsHtml(resume)}
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm"
+                  >
+                    ⬇️ Download
+                  </button>
+                )}
+                <button
+                  type="button"
                   onClick={() => {
                     logout();
                     router.push("/login");
                   }}
-                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600"
+                  className="rounded-full border border-slate-200 bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition shadow-md"
                 >
                   Logout
                 </button>

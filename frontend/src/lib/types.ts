@@ -52,6 +52,9 @@ export type Resume = {
   user_id: string;
   title: string;
   status: string;
+  source_type: "uploaded" | "builder" | "jd_apply" | string;
+  template?: string;
+  layout?: string[];
   personal_info: PersonalInfo;
   experience: ExperienceItem[];
   education: EducationItem[];
@@ -66,12 +69,15 @@ export type Resume = {
 export type ResumePayload = {
   title: string;
   status?: string;
+  template?: string;
+  layout?: string[];
   personal_info: PersonalInfo;
   experience: ExperienceItem[];
   education: EducationItem[];
   skills: string[];
   tools: string[];
   projects: ProjectItem[];
+  source_type?: string;
   custom_sections: CustomSectionItem[];
 };
 

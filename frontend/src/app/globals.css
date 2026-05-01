@@ -36,3 +36,26 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+.signal {
+  color: #06b6d4;
+}
+
+.inspector-input {
+  width: 100%;
+  border-radius: 0.625rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #1e293b;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.inspector-input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.15);
+}
+

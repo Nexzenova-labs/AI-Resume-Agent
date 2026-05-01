@@ -18,6 +18,10 @@ class ResumeService:
         created_resume = await self.resume_repository.create(resume)
         return ResumeResponse.model_validate(created_resume)
 
+    async def list_resumes(self, *, user: User) -> list[ResumeResponse]:
+        resumes = await self.resume_repository.list_for_user(user_id=user.id)
+        return [ResumeResponse.model_validate(r) for r in resumes]
+
     async def get_resume(self, *, resume_id: str, user: User) -> ResumeResponse:
         resume = await self.resume_repository.get_by_id_for_user(
             resume_id=resume_id,
@@ -28,7 +32,6 @@ class ResumeService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Resume not found.",
             )
-
         return ResumeResponse.model_validate(resume)
 
     async def update_resume(
@@ -53,3 +56,15 @@ class ResumeService:
 
         updated_resume = await self.resume_repository.update(resume)
         return ResumeResponse.model_validate(updated_resume)
+
+    async def delete_resume(self, *, resume_id: str, user: User) -> None:
+        resume = await self.resume_repository.get_by_id_for_user(
+            resume_id=resume_id,
+            user_id=user.id,
+        )
+        if not resume:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Resume not found.",
+            )
+        await self.resume_repository.delete(resume)

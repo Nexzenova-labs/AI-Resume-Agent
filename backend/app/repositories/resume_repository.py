@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.resume import Resume
@@ -22,7 +22,19 @@ class ResumeRepository:
         )
         return result.scalar_one_or_none()
 
+    async def list_for_user(self, *, user_id: str) -> list[Resume]:
+        result = await self.session.execute(
+            select(Resume)
+            .where(Resume.user_id == user_id)
+            .order_by(Resume.updated_at.desc())
+        )
+        return list(result.scalars().all())
+
     async def update(self, resume: Resume) -> Resume:
         await self.session.commit()
         await self.session.refresh(resume)
         return resume
+
+    async def delete(self, resume: Resume) -> None:
+        await self.session.delete(resume)
+        await self.session.commit()

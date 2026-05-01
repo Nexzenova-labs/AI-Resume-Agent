@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class PersonalInfo(BaseModel):
@@ -49,6 +49,9 @@ class CustomSectionItem(BaseModel):
 class ResumeBase(BaseModel):
     title: str = Field(default="Untitled Resume", min_length=1, max_length=255)
     status: str = Field(default="draft")
+    source_type: str = Field(default="uploaded")
+    template: str = Field(default="modern-impact")
+    layout: list[str] = Field(default_factory=list)
     personal_info: PersonalInfo = Field(default_factory=PersonalInfo)
     experience: list[ExperienceItem] = Field(default_factory=list)
     education: list[EducationItem] = Field(default_factory=list)
@@ -59,6 +62,22 @@ class ResumeBase(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
+    @field_validator("personal_info", mode="before")
+    @classmethod
+    def _coerce_personal_info(cls, v: object) -> object:
+        """DB rows with NULL personal_info must not crash model_validate."""
+        return v if v is not None else PersonalInfo()
+
+    @field_validator(
+        "experience", "education", "skills", "tools",
+        "projects", "custom_sections", "layout",
+        mode="before",
+    )
+    @classmethod
+    def _coerce_lists(cls, v: object) -> object:
+        """DB rows with NULL list columns become empty lists."""
+        return v if v is not None else []
+
 
 class ResumeCreate(ResumeBase):
     pass
@@ -67,6 +86,9 @@ class ResumeCreate(ResumeBase):
 class ResumeUpdate(BaseModel):
     title: Optional[str] = Field(default=None, min_length=1, max_length=255)
     status: Optional[str] = None
+    source_type: Optional[str] = None
+    template: Optional[str] = None
+    layout: Optional[list[str]] = None
     personal_info: Optional[PersonalInfo] = None
     experience: Optional[list[ExperienceItem]] = None
     education: Optional[list[EducationItem]] = None

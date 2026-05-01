@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     chromadb_path: str = "./ai/chromadb"
     openai_api_key: str = ""
+    gemini_api_key: str = ""
     llm_provider: str = "openai"
     allow_guest: bool = True
     session_ttl: str = "24h"

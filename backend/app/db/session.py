@@ -25,6 +25,9 @@ AsyncSessionLocal = async_sessionmaker(
     class_=AsyncSession,
 )
 
+# Backward-compatible alias used by older local scripts/tests.
+async_session_maker = AsyncSessionLocal
+
 
 async def get_db_session() -> AsyncIterator[AsyncSession]:
     async with AsyncSessionLocal() as session:

@@ -11,6 +11,7 @@ from app.api.routes.interview import router as interview_router
 from app.api.routes.resume import router as resume_router
 from app.api.routes.scrape import router as scrape_router
 from app.api.routes.user import router as user_router
+from app.api.routes.jd_apply import router as jd_apply_router
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -41,7 +42,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
 app.add_middleware(SecurityHeadersMiddleware)
@@ -53,6 +54,7 @@ app.include_router(interview_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
 app.include_router(resume_router, prefix="/api")
 app.include_router(scrape_router, prefix="/api")
+app.include_router(jd_apply_router, prefix="/api")
 
 
 @app.get("/", tags=["root"])

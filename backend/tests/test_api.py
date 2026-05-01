@@ -5,11 +5,13 @@ from jose import jwt
 from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
+from app.ai.llm_service import ExperienceEnhancement, TailoringDiff, apply_tailoring
 from app.core.security import create_refresh_token
 from app.db.base import Base
 from app.db.session import engine
 from app.main import app
 from app.models import resume, user  # noqa: F401
+from app.schemas.resume import ResumeBase
 from app.schemas.scrape import JobScrapeResponse
 
 TEST_DB_PATH = Path("test_backend.db")
@@ -541,3 +543,73 @@ def test_interview_answer_rejects_blank_answer() -> None:
         )
 
         assert answer_response.status_code == 422
+
+
+def test_apply_tailoring_preserves_resume_structure() -> None:
+    original = ResumeBase.model_validate(
+        {
+            "title": "Original Resume",
+            "personal_info": {
+                "full_name": "Test User",
+                "summary": "Backend engineer with Python and FastAPI experience.",
+            },
+            "experience": [
+                {
+                    "company": "Acme",
+                    "role": "Software Engineer",
+                    "start_date": "2022",
+                    "end_date": "2024",
+                    "description": "Built internal systems.",
+                    "highlights": ["Shipped core APIs"],
+                }
+            ],
+            "education": [
+                {
+                    "institution": "OpenAI University",
+                    "degree": "B.Tech",
+                    "field_of_study": "Computer Science",
+                }
+            ],
+            "skills": ["Python"],
+            "tools": ["FastAPI"],
+            "projects": [
+                {
+                    "name": "Resume Agent",
+                    "description": "ATS optimization platform",
+                    "technologies": ["Python"],
+                    "highlights": ["Production launch"],
+                }
+            ],
+            "custom_sections": [
+                {
+                    "name": "Certifications",
+                    "items": ["AWS Certified Developer"],
+                }
+            ],
+        }
+    )
+
+    diff = TailoringDiff(
+        job_title="AI Engineer",
+        summary="Backend engineer with Python and FastAPI experience. Additional alignment keywords for AI Engineer roles include Docker, Kubernetes, Machine Learning.",
+        added_skills=["Machine Learning"],
+        added_tools=["Docker", "Kubernetes"],
+        experience_enhancements=[
+            ExperienceEnhancement(index=0, added_highlights=["This should not be applied."])
+        ],
+        added_project={
+            "name": "Injected Project",
+            "description": "Should never be added",
+        },
+    )
+
+    tailored = apply_tailoring(original, diff)
+
+    assert tailored.personal_info.summary == diff.summary
+    assert tailored.experience == original.experience
+    assert tailored.education == original.education
+    assert tailored.projects == original.projects
+    assert tailored.custom_sections == original.custom_sections
+    assert "Machine Learning" in tailored.skills
+    assert "Docker" in tailored.tools
+    assert "Kubernetes" in tailored.tools

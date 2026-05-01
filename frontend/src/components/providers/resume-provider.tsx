@@ -22,6 +22,7 @@ type ResumeContextValue = {
   error: string | null;
   loadResume: (resumeId: string) => Promise<void>;
   saveResume: (payload: ResumePayload) => Promise<Resume>;
+  setResume: (resume: Resume) => void;
   clearError: () => void;
 };
 
@@ -114,6 +115,11 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       error,
       loadResume,
       saveResume,
+      setResume: (r: Resume) => {
+        setResume(r);
+        setResumeIdState(r.id);
+        setStoredResumeId(r.id);
+      },
       clearError: () => setError(null),
     }),
     [error, isLoading, isSaving, resume, resumeId],
