@@ -623,13 +623,13 @@ KEYWORD INJECTION RULES:
 1. Extract EVERY significant word, phrase, skill, tool, framework, and domain term from the JD
 2. Find ALL terms that are MISSING from the resume
 3. Add missing terms to added_skills and added_tools using exact spelling from the JD
-4. Append JD keywords to the summary only — do NOT rewrite or restructure the resume
+4. Rewrite the summary to incorporate JD keywords — do NOT restructure the rest of the resume
 
 SUMMARY RULE — CRITICAL:
-- DO NOT rewrite or replace the existing summary
-- Return the ORIGINAL summary text verbatim, then APPEND one sentence at the end
-- The appended sentence should include as many high-value JD terms as possible without removing original text
-- Format: "[original summary text]. Additional alignment keywords for [job title] roles include [key JD terms]."
+- REWRITE the existing summary to perfectly align with the job description while maintaining the candidate's core identity
+- The rewritten summary should naturally weave in as many high-value JD terms as possible to achieve at least a 70% ATS keyword match.
+- Ensure the new summary reads professionally and highlights how the candidate's background matches the specific role.
+- Format: Return ONLY the newly rewritten summary paragraph.
 
 STRICT RULES — never break:
 - NEVER change name, email, phone, location, links
@@ -647,7 +647,7 @@ Add as many keywords as needed — prioritize completeness over brevity.
 Return ONLY valid JSON:
 {
   "job_title": "job title from JD",
-  "summary": "ORIGINAL summary text + appended sentence with JD keywords",
+  "summary": "REWRITTEN summary text seamlessly incorporating JD keywords",
   "added_skills": ["all", "missing", "skill", "keywords", "from", "JD"],
   "added_tools": ["all", "missing", "tool", "names", "from", "JD"],
   "experience_enhancements": [],
@@ -694,11 +694,11 @@ async def _openai_tailor(resume: ResumeBase, jd_text: str, api_key: str) -> Tail
 
     user_msg = (
         f"CANDIDATE RESUME:\n{json.dumps(resume_dict, indent=2)}\n\n"
-        f"ORIGINAL SUMMARY (keep this verbatim, then append):\n{existing_summary}\n\n"
+        f"ORIGINAL SUMMARY (to be rewritten):\n{existing_summary}\n\n"
         f"JOB DESCRIPTION:\n{jd_text[:3000]}\n\n"
         f"ALL MISSING JD TERMS TO INJECT:\n{', '.join(missing_all)}\n\n"
         f"MISSING TOOLS:\n{', '.join(missing_tools)}\n\n"
-        "Inject ALL missing keywords. Keep the original summary and append one sentence. "
+        "Inject ALL missing keywords. Rewrite the summary to naturally incorporate the missing keywords. "
         "Do not modify experience, education, projects, names, dates, or other existing content."
     )
 
@@ -717,13 +717,7 @@ async def _openai_tailor(resume: ResumeBase, jd_text: str, api_key: str) -> Tail
     raw = response.choices[0].message.content or "{}"
     data: dict = json.loads(raw)
 
-    # Safety net: if GPT returned a summary that lost the original, restore it
     returned_summary = data.get("summary", "")
-    if existing_summary and existing_summary[:50] not in returned_summary:
-        returned_summary = _append_jd_keywords_to_summary(
-            existing_summary, _extract_jd_title(jd_text),
-            [*data.get("added_tools", missing_tools[:10]), *data.get("added_skills", missing_all[:20])]
-        )
 
     return TailoringDiff(
         job_title=data.get("job_title", _extract_jd_title(jd_text)),
@@ -766,11 +760,11 @@ async def _gemini_tailor(resume: ResumeBase, jd_text: str, api_key: str) -> Tail
     prompt = (
         f"{_SYSTEM_PROMPT}\n\n"
         f"CANDIDATE RESUME:\n{json.dumps(resume_dict, indent=2)}\n\n"
-        f"ORIGINAL SUMMARY (keep this verbatim, then append):\n{existing_summary}\n\n"
+        f"ORIGINAL SUMMARY (to be rewritten):\n{existing_summary}\n\n"
         f"JOB DESCRIPTION:\n{jd_text[:3000]}\n\n"
         f"ALL MISSING JD TERMS TO INJECT:\n{', '.join(missing_all)}\n\n"
         f"MISSING TOOLS:\n{', '.join(missing_tools)}\n\n"
-        "Inject ALL missing keywords. Keep the original summary and append one sentence. "
+        "Inject ALL missing keywords. Rewrite the summary to naturally incorporate the missing keywords. "
         "Do not modify experience, education, projects, names, dates, or other existing content."
     )
 
@@ -793,11 +787,6 @@ async def _gemini_tailor(resume: ResumeBase, jd_text: str, api_key: str) -> Tail
     data: dict = json.loads(raw)
 
     returned_summary = data.get("summary", "")
-    if existing_summary and existing_summary[:50] not in returned_summary:
-        returned_summary = _append_jd_keywords_to_summary(
-            existing_summary, _extract_jd_title(jd_text),
-            [*data.get("added_tools", missing_tools[:10]), *data.get("added_skills", missing_all[:20])]
-        )
 
     return TailoringDiff(
         job_title=data.get("job_title", _extract_jd_title(jd_text)),
