@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     google_client_id: str = ""
     google_client_secret: str = ""
+    supabase_url: str = ""
+    supabase_jwt_secret: str = ""
     embedding_provider: str = "local"
     openai_embedding_model: str = "text-embedding-3-small"
     embedding_dimensions: int = 256

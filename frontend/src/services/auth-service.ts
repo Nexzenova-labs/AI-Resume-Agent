@@ -1,5 +1,6 @@
 import { apiRequest } from "@/lib/api-client";
-import type { AuthResponse, User } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
+import type { User } from "@/lib/types";
 
 export type AuthPayload = {
   email: string;
@@ -8,27 +9,19 @@ export type AuthPayload = {
 };
 
 export const authService = {
-  signup(payload: Required<AuthPayload>) {
-    return apiRequest<AuthResponse>("/api/auth/signup", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-  },
-  login(payload: Pick<AuthPayload, "email" | "password">) {
-    return apiRequest<AuthResponse>("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-  },
-  me() {
+  async me() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not logged in");
+    
+    // We still fetch the user from our backend to get application-specific data
     return apiRequest<User>("/api/user/me", {
       method: "GET",
     });
   },
-  logout() {
-    return apiRequest<void>("/api/auth/logout", {
-      method: "POST",
-    });
+  async logout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
   },
   stats() {
     return apiRequest<{

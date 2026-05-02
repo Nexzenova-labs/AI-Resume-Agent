@@ -4,33 +4,29 @@ import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, Loader2, User, ArrowRight } from "lucide-react";
-import Link from "next/link";
+import { Lock, Loader2, ArrowRight } from "lucide-react";
 
-function SignupContent() {
+function ResetPasswordContent() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password !== confirmPassword) {
+      setMessage({ type: "error", text: "Passwords do not match" });
+      return;
+    }
+
     setIsLoading(true);
     setMessage(null);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-        emailRedirectTo: window.location.origin + "/auth/callback",
-      },
+    const { error } = await supabase.auth.updateUser({
+      password: password,
     });
 
     if (error) {
@@ -39,9 +35,9 @@ function SignupContent() {
     } else {
       setMessage({ 
         type: "success", 
-        text: "Account created! Please check your email to verify your account before logging in." 
+        text: "Password updated successfully! Redirecting to dashboard..." 
       });
-      setIsLoading(false);
+      setTimeout(() => router.push("/dashboard"), 2000);
     }
   };
 
@@ -53,8 +49,8 @@ function SignupContent() {
         className="w-full max-w-md space-y-8 rounded-3xl bg-white p-8 shadow-xl shadow-slate-200/50 border border-slate-100"
       >
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Create Account</h1>
-          <p className="mt-2 text-slate-500">Join Nexzen AI today</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Reset Password</h1>
+          <p className="mt-2 text-slate-500">Enter your new password below</p>
         </div>
 
         <AnimatePresence mode="wait">
@@ -72,34 +68,12 @@ function SignupContent() {
           )}
         </AnimatePresence>
 
-        <form onSubmit={handleSignup} className="space-y-4">
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Full Name"
-              required
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 transition-all"
-            />
-          </div>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-            <input
-              type="email"
-              placeholder="Email address"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 transition-all"
-            />
-          </div>
+        <form onSubmit={handleReset} className="space-y-4">
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             <input
               type="password"
-              placeholder="Password"
+              placeholder="New Password"
               required
               minLength={6}
               value={password}
@@ -107,31 +81,36 @@ function SignupContent() {
               className="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 transition-all"
             />
           </div>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <input
+              type="password"
+              placeholder="Confirm Password"
+              required
+              minLength={6}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 transition-all"
+            />
+          </div>
           
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !password || !confirmPassword}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 font-semibold text-white hover:bg-slate-800 disabled:opacity-50 transition-all"
           >
-            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <>Sign Up <ArrowRight className="h-5 w-5" /></>}
+            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <>Update Password <ArrowRight className="h-5 w-5" /></>}
           </button>
         </form>
-
-        <div className="text-center text-sm text-slate-500">
-          Already have an account?{" "}
-          <Link href="/login" className="font-semibold text-slate-900 hover:underline">
-            Login
-          </Link>
-        </div>
       </motion.div>
     </div>
   );
 }
 
-export default function SignupPage() {
+export default function ResetPasswordPage() {
   return (
     <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-slate-500">Loading...</div>}>
-      <SignupContent />
+      <ResetPasswordContent />
     </Suspense>
   );
 }

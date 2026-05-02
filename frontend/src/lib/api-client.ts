@@ -1,3 +1,5 @@
+import { createClient } from "@/lib/supabase/client";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -15,38 +17,20 @@ export class ApiError extends Error {
 
 type RequestOptions = RequestInit & {
   token?: string | null;
-  skipAuthRefresh?: boolean;
 };
-
-let refreshPromise: Promise<boolean> | null = null;
-
-async function refreshSession(): Promise<boolean> {
-  if (refreshPromise) {
-    return refreshPromise;
-  }
-
-  refreshPromise = fetch(`${API_BASE_URL}/api/auth/refresh`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-    cache: "no-store",
-  })
-    .then((response) => response.ok)
-    .catch(() => false)
-    .finally(() => {
-      refreshPromise = null;
-    });
-
-  return refreshPromise;
-}
 
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { token, headers, skipAuthRefresh = false, ...rest } = options;
+  const { token: providedToken, headers, ...rest } = options;
+  
+  let token = providedToken;
+  if (!token && typeof window !== 'undefined') {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    token = session?.access_token;
+  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...rest,
@@ -55,26 +39,10 @@ export async function apiRequest<T>(
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(headers ?? {}),
     },
-    credentials: "include",
     cache: "no-store",
   });
 
-  const shouldAttemptRefresh =
-    response.status === 401 &&
-    !skipAuthRefresh &&
-    !path.startsWith("/api/auth/login") &&
-    !path.startsWith("/api/auth/signup") &&
-    !path.startsWith("/api/auth/refresh");
-
-  if (shouldAttemptRefresh) {
-    const refreshed = await refreshSession();
-    if (refreshed) {
-      return apiRequest<T>(path, {
-        ...options,
-        skipAuthRefresh: true,
-      });
-    }
-  }
+  const shouldAttemptRefresh = false;
 
   const raw = await response.text();
   let data: unknown = null;

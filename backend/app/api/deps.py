@@ -11,6 +11,11 @@ from app.models.user import User
 from app.repositories.user_repository import UserRepository
 
 
+from jose import jwt, JWTError
+from app.core.config import get_settings
+
+settings = get_settings()
+
 async def get_current_user(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     authorization: Annotated[Optional[str], Header(alias="Authorization")] = None,
@@ -28,18 +33,39 @@ async def get_current_user(
             detail="Authentication credentials were not provided.",
         )
 
-    subject = validate_token_subject(token)
-    if not subject:
+    try:
+        # Supabase uses HS256 for its JWTs
+        payload = jwt.decode(
+            token, 
+            settings.supabase_jwt_secret, 
+            algorithms=["HS256"],
+            options={"verify_aud": False} # Supabase aud can vary
+        )
+        user_id = payload.get("sub")
+        email = payload.get("email")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token: missing subject.",
+            )
+    except JWTError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token.",
+            detail=f"Could not validate credentials: {str(e)}",
         )
 
-    user = await UserRepository(session).get_by_id(subject)
+    user_repo = UserRepository(session)
+    user = await user_repo.get_by_id(user_id)
+    
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User could not be found.",
+        # If user exists in Supabase but not in our table (e.g. first time OAuth/OTP)
+        # We auto-create them in our local 'users' table
+        user = await user_repo.create(
+            id=user_id,
+            email=email or f"{user_id}@supabase.user",
+            full_name=email.split("@")[0] if email else "Supabase User",
+            hashed_password="SUPABASE_AUTH",
+            auth_provider="supabase"
         )
 
     return user

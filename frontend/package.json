@@ -12,8 +12,12 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@supabase/auth-helpers-nextjs": "^0.15.0",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.105.1",
     "framer-motion": "^12.9.4",
     "konva": "^9.3.20",
+    "lucide-react": "^1.14.0",
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

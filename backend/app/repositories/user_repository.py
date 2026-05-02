@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,12 +22,14 @@ class UserRepository:
     async def create(
         self,
         *,
+        id: str | None = None,
         email: str,
         full_name: str,
         hashed_password: str,
         auth_provider: str = "email",
     ) -> User:
         user = User(
+            id=id or str(uuid4()),
             email=email,
             full_name=full_name,
             hashed_password=hashed_password,
