@@ -13,3 +13,5 @@ __pycache__/
 frontend/.env.local
 backend/.env
 
+.vercel
+.env*.local

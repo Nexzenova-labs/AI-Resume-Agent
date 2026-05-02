@@ -17,6 +17,10 @@ engine: AsyncEngine = create_async_engine(
     settings.sqlalchemy_database_url,
     future=True,
     echo=False,
+    connect_args={
+        "prepared_statement_cache_size": 0,
+        "statement_cache_size": 0,
+    }
 )
 
 AsyncSessionLocal = async_sessionmaker(
