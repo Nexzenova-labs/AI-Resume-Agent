@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { Download, FolderOpen, LogIn, LogOut } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { useAuth } from "@/components/providers/auth-provider";
@@ -76,7 +77,7 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, isGuest, logout } = useAuth();
   const { resume } = useResume();
 
   return (
@@ -142,7 +143,7 @@ export function AppShell({
               </div>
               <div className="flex flex-wrap gap-3">
                 <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">
-                  {user?.full_name ?? "Workspace"}
+                  {user?.full_name ?? "Guest workspace"}
                 </div>
                 <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">
                   {resume ? resume.title : "No saved resume yet"}
@@ -150,28 +151,35 @@ export function AppShell({
                 <button
                   type="button"
                   onClick={() => router.push("/dashboard?tab=resume&mode=vault")}
-                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm"
                 >
-                  📂 View Resumes
+                  <FolderOpen className="h-4 w-4" />
+                  View Resumes
                 </button>
                 {resume && (
                   <button
                     type="button"
                     onClick={() => resumeService.downloadAsHtml(resume)}
-                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm"
                   >
-                    ⬇️ Download
+                    <Download className="h-4 w-4" />
+                    Download
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => {
-                    logout();
-                    router.push("/login");
+                    if (isGuest) {
+                      router.push("/login");
+                    } else {
+                      logout();
+                      router.push("/login");
+                    }
                   }}
-                  className="rounded-full border border-slate-200 bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition shadow-md"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition shadow-md"
                 >
-                  Logout
+                  {isGuest ? <LogIn className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
+                  {isGuest ? "Sign in" : "Logout"}
                 </button>
               </div>
             </div>

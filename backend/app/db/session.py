@@ -13,14 +13,20 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
-engine: AsyncEngine = create_async_engine(
-    settings.sqlalchemy_database_url,
-    future=True,
-    echo=False,
-    connect_args={
+engine_kwargs = {
+    "future": True,
+    "echo": False,
+}
+
+if settings.sqlalchemy_database_url.startswith("postgresql+asyncpg://"):
+    engine_kwargs["connect_args"] = {
         "prepared_statement_cache_size": 0,
         "statement_cache_size": 0,
     }
+
+engine: AsyncEngine = create_async_engine(
+    settings.sqlalchemy_database_url,
+    **engine_kwargs,
 )
 
 AsyncSessionLocal = async_sessionmaker(

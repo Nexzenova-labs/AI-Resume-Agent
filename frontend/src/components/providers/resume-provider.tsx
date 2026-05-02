@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { clearStoredResumeId, getStoredResumeId, setStoredResumeId } from "@/lib/storage";
+import { createEmptyResumePayload, guestResumeStore } from "@/lib/guest-resumes";
 import type { Resume, ResumePayload } from "@/lib/types";
 import { resumeService } from "@/services/resume-service";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -22,6 +23,7 @@ type ResumeContextValue = {
   error: string | null;
   loadResume: (resumeId: string) => Promise<void>;
   saveResume: (payload: ResumePayload) => Promise<Resume>;
+  createDraftResume: () => Resume;
   setResume: (resume: Resume) => void;
   clearError: () => void;
 };
@@ -38,6 +40,12 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
 
   const loadResume = async (nextResumeId: string) => {
     if (!user) {
+      const guestResume = guestResumeStore.get(nextResumeId);
+      if (guestResume) {
+        setResume(guestResume);
+        setResumeIdState(guestResume.id);
+        setStoredResumeId(guestResume.id);
+      }
       return;
     }
 
@@ -62,7 +70,12 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
 
   const saveResume = async (payload: ResumePayload) => {
     if (!user) {
-      throw new Error("Authentication is required.");
+      const response = guestResumeStore.save(payload, resumeId);
+      setResume(response);
+      setResumeIdState(response.id);
+      setStoredResumeId(response.id);
+      setError(null);
+      return response;
     }
 
     setIsSaving(true);
@@ -88,13 +101,20 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    const storedResumeId = getStoredResumeId();
+
     if (!user) {
-      setResume(null);
-      setResumeIdState(null);
+      if (storedResumeId) {
+        const guestResume = guestResumeStore.get(storedResumeId);
+        setResume(guestResume);
+        setResumeIdState(guestResume?.id ?? null);
+      } else {
+        setResume(null);
+        setResumeIdState(null);
+      }
       return;
     }
 
-    const storedResumeId = getStoredResumeId();
     if (!storedResumeId) {
       return;
     }
@@ -115,6 +135,28 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       error,
       loadResume,
       saveResume,
+      createDraftResume: () => {
+        if (user) {
+          const timestamp = new Date().toISOString();
+          const draft: Resume = {
+            ...createEmptyResumePayload(),
+            id: `draft-${crypto.randomUUID()}`,
+            user_id: user.id,
+            created_at: timestamp,
+            updated_at: timestamp,
+          };
+          setResume(draft);
+          setResumeIdState(null);
+          clearStoredResumeId();
+          return draft;
+        }
+
+        const draft = guestResumeStore.createDraft();
+        setResume(draft);
+        setResumeIdState(draft.id);
+        setStoredResumeId(draft.id);
+        return draft;
+      },
       setResume: (r: Resume) => {
         setResume(r);
         setResumeIdState(r.id);
@@ -122,7 +164,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       },
       clearError: () => setError(null),
     }),
-    [error, isLoading, isSaving, resume, resumeId],
+    [error, isLoading, isSaving, resume, resumeId, user],
   );
 
   return (

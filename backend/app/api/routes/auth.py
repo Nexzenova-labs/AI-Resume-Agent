@@ -45,9 +45,12 @@ def _set_auth_cookies(response: Response, token_response: TokenResponse) -> None
 def _build_public_auth_response(token_response: TokenResponse) -> TokenResponse:
     if settings.expose_bearer_token_in_response:
         return token_response
-    token_response.access_token = None
-    token_response.refresh_token = None
-    return token_response
+    return TokenResponse(
+        access_token=None,
+        refresh_token=None,
+        token_type=token_response.token_type,
+        user=token_response.user,
+    )
 
 
 def _clear_auth_cookies(response: Response) -> None:

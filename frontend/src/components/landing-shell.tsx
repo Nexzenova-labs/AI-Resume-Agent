@@ -1,34 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-
-const features = [
-  {
-    title: "Resume Studio",
-    eyebrow: "Create",
-    description:
-      "Capture experience with guided prompts, skill suggestions, and reusable profile blocks.",
-  },
-  {
-    title: "ATS Match Engine",
-    eyebrow: "Optimize",
-    description:
-      "Compare resume versions against job descriptions, keyword fit, and recruiter-facing clarity.",
-  },
-  {
-    title: "Interview Arena",
-    eyebrow: "Practice",
-    description:
-      "Run AI-led mock interviews with difficulty tuning, response scoring, and coaching loops.",
-  },
-];
-
-const pipelineSteps = [
-  "Import a base resume or start from guided forms.",
-  "Tailor content against specific job links and ATS signals.",
-  "Practice likely interview questions before you apply.",
-];
+import { UserCircle, LogIn, ArrowRight } from "lucide-react";
 
 const stats = [
   { label: "Resume variants", value: "12+" },
@@ -37,6 +12,13 @@ const stats = [
 ];
 
 export function LandingShell() {
+  const router = useRouter();
+
+  const handleGuestEntry = () => {
+    // Navigate directly to dashboard, auth-provider will handle guest state
+    router.push("/dashboard");
+  };
+
   return (
     <main className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0">
@@ -58,8 +40,14 @@ export function LandingShell() {
               AI Resume Agent
             </p>
           </div>
-          <div className="hidden rounded-full border border-slate-300/70 bg-white/70 px-4 py-2 text-sm text-slate-600 shadow-sm backdrop-blur md:block">
-            Next.js UI layer ready
+          <div className="flex gap-4">
+             <Link
+                href="/login"
+                className="flex items-center gap-2 rounded-full bg-slate-950 px-5 py-2 text-sm font-semibold text-white transition-transform duration-300 hover:-translate-y-0.5"
+              >
+                <LogIn className="h-4 w-4" />
+                Login
+              </Link>
           </div>
         </motion.header>
 
@@ -76,35 +64,28 @@ export function LandingShell() {
             </div>
 
             <h1 className="mt-6 text-5xl font-semibold leading-[0.95] tracking-[-0.04em] text-slate-950 md:text-7xl">
-              Career tooling that feels more like a command center than a form.
+              Career tooling built for the modern era.
             </h1>
 
             <p className="mt-6 max-w-2xl text-base leading-8 text-slate-600 md:text-lg">
-              This frontend is now positioned as a polished landing experience for
-              the AI Resume Agent platform, with motion, stronger storytelling, and
-              space for the resume builder, ATS analysis, and interview workflows to
-              grow into dedicated product surfaces.
+              Unlock your career potential with our AI command center. Skip the forms and start building results immediately.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
-                href="/signup"
-                className="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition-transform duration-300 hover:-translate-y-0.5"
-              >
-                Create account
-              </Link>
-              <Link
                 href="/login"
-                className="rounded-full border border-slate-300 bg-white/75 px-6 py-3 text-sm font-semibold text-slate-700 backdrop-blur transition-colors duration-300 hover:border-slate-400 hover:bg-white"
+                className="flex items-center gap-2 rounded-full bg-slate-950 px-8 py-4 text-base font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200"
               >
-                Login
+                Sign In <ArrowRight className="h-5 w-5" />
               </Link>
-              <a
-                href="#workflow"
-                className="rounded-full border border-slate-300 bg-white/75 px-6 py-3 text-sm font-semibold text-slate-700 backdrop-blur transition-colors duration-300 hover:border-slate-400 hover:bg-white"
+              
+              <button
+                onClick={handleGuestEntry}
+                className="flex items-center gap-2 rounded-full border border-slate-300 bg-white/75 px-8 py-4 text-base font-semibold text-slate-700 backdrop-blur transition-all duration-300 hover:border-slate-400 hover:bg-white hover:-translate-y-0.5"
               >
-                View product flow
-              </a>
+                <UserCircle className="h-5 w-5" />
+                Try as Guest
+              </button>
             </div>
 
             <div className="mt-10 grid gap-4 sm:grid-cols-3">
@@ -138,112 +119,37 @@ export function LandingShell() {
             <div className="rounded-[2rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(241,245,249,0.88))] p-5 shadow-[0_30px_90px_rgba(15,23,42,0.12)] backdrop-blur">
               <div className="rounded-[1.5rem] bg-slate-950 p-5 text-white">
                 <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-400">
-                  <span>Live Workflow</span>
-                  <span>Guest Mode</span>
+                  <span>Dashboard Preview</span>
+                  <span>Interactive</span>
                 </div>
                 <div className="mt-5 rounded-[1.25rem] bg-white/10 p-4">
-                  <div className="text-sm text-slate-300">Current objective</div>
-                  <div className="mt-2 text-2xl font-semibold tracking-[-0.03em]">
-                    Tailor resume for Senior AI Engineer role
+                  <div className="text-sm text-slate-300">ATS Match Score</div>
+                  <div className="mt-2 text-3xl font-bold tracking-tight text-emerald-400">
+                    84%
                   </div>
                   <div className="mt-4 h-2 rounded-full bg-white/10">
                     <motion.div
-                      className="h-2 rounded-full bg-gradient-to-r from-emerald-400 via-cyan-300 to-orange-300"
+                      className="h-2 rounded-full bg-emerald-400"
                       initial={{ width: 0 }}
-                      animate={{ width: "78%" }}
+                      animate={{ width: "84%" }}
                       transition={{ duration: 1.1, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
                     />
-                  </div>
-                  <div className="mt-3 flex items-center justify-between text-sm text-slate-300">
-                    <span>ATS match confidence</span>
-                    <span>78%</span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                <div className="rounded-[1.4rem] border border-slate-200 bg-white p-4">
-                  <div className="text-sm font-semibold text-slate-900">Signals picked up</div>
-                  <ul className="mt-3 space-y-3 text-sm text-slate-600">
-                    <li>Python, FastAPI, and agent workflows detected from the JD.</li>
-                    <li>Resume impact bullets need more quantified outcomes.</li>
-                    <li>Interview mode can generate a targeted practice set next.</li>
-                  </ul>
+              <div className="mt-4 space-y-3">
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                  <div className="text-xs font-semibold uppercase text-slate-400">Recent Activity</div>
+                  <div className="mt-2 text-sm font-medium text-slate-700">Resume tailored for "Lead Frontend"</div>
                 </div>
-                <div className="rounded-[1.4rem] border border-slate-200 bg-[#fff7ed] p-4">
-                  <div className="text-sm font-semibold text-slate-900">Next move</div>
-                  <p className="mt-3 text-sm leading-6 text-slate-600">
-                    Generate a JD-specific resume variant, then branch into ATS feedback
-                    and interview preparation without leaving the workspace.
-                  </p>
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                  <div className="mt-1 text-sm font-medium text-slate-700">Interview prep set generated</div>
                 </div>
               </div>
             </div>
           </motion.aside>
         </div>
-
-        <section
-          id="features"
-          className="relative mt-10 grid gap-6 border-t border-slate-200/80 py-12 md:grid-cols-3"
-        >
-          {features.map((feature, index) => (
-            <motion.article
-              key={feature.title}
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.35 }}
-              transition={{
-                duration: 0.55,
-                delay: 0.12 * index,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-              className="rounded-[1.7rem] border border-slate-200/80 bg-white/85 p-6 shadow-[0_20px_50px_rgba(15,23,42,0.08)] backdrop-blur"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.32em] text-signal">
-                {feature.eyebrow}
-              </p>
-              <h2 className="mt-4 text-2xl font-semibold tracking-[-0.03em] text-slate-950">
-                {feature.title}
-              </h2>
-              <p className="mt-4 text-sm leading-7 text-slate-600">
-                {feature.description}
-              </p>
-            </motion.article>
-          ))}
-        </section>
-
-        <motion.section
-          id="workflow"
-          initial={{ opacity: 0, y: 26 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.25 }}
-          transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-10 rounded-[2rem] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(30,41,59,0.92))] p-8 text-white shadow-[0_28px_90px_rgba(15,23,42,0.2)]"
-        >
-          <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.34em] text-cyan-300">
-                Workflow
-              </p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] md:text-4xl">
-                A frontend foundation for the product we actually want to build.
-              </h2>
-            </div>
-            <div className="grid gap-4">
-              {pipelineSteps.map((step, index) => (
-                <div
-                  key={step}
-                  className="flex items-start gap-4 rounded-[1.3rem] border border-white/10 bg-white/5 p-4"
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-cyan-200">
-                    0{index + 1}
-                  </div>
-                  <p className="text-sm leading-7 text-slate-200">{step}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.section>
       </section>
     </main>
   );

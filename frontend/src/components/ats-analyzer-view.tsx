@@ -9,6 +9,23 @@ import type { AtsAnalysisResult, ResumeQualityResult, ResumePayload } from "@/li
 import { atsService } from "@/services/ats-service";
 import { resumeService } from "@/services/resume-service";
 
+function resumeToPayload(resume: NonNullable<ReturnType<typeof useResume>["resume"]>): ResumePayload {
+  return {
+    title: resume.title,
+    status: resume.status,
+    source_type: resume.source_type,
+    template: resume.template,
+    layout: resume.layout,
+    personal_info: resume.personal_info,
+    experience: resume.experience,
+    education: resume.education,
+    skills: resume.skills,
+    tools: resume.tools,
+    projects: resume.projects,
+    custom_sections: resume.custom_sections,
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -64,7 +81,7 @@ function BarScore({ label, score }: { label: string; score: number }) {
 type Tab = "quick" | "match";
 
 export function AtsAnalyzerView() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { resume, resumeId } = useResume();
   const [activeTab, setActiveTab] = useState<Tab>("quick");
 
@@ -102,7 +119,7 @@ export function AtsAnalyzerView() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.2 }}
           >
-            <QuickScoreTab user={user} resume={resume} resumeId={resumeId} />
+            <QuickScoreTab isGuest={isGuest} user={user} resume={resume} resumeId={resumeId} />
           </motion.div>
         ) : (
           <motion.div
@@ -112,7 +129,7 @@ export function AtsAnalyzerView() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.2 }}
           >
-            <JdMatchTab user={user} resume={resume} resumeId={resumeId} />
+            <JdMatchTab isGuest={isGuest} user={user} resume={resume} resumeId={resumeId} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -125,10 +142,12 @@ export function AtsAnalyzerView() {
 // ─────────────────────────────────────────────────────────────────────────────
 function QuickScoreTab({
   user,
+  isGuest,
   resume,
   resumeId,
 }: {
   user: ReturnType<typeof useAuth>["user"];
+  isGuest: boolean;
   resume: ReturnType<typeof useResume>["resume"];
   resumeId: string | null;
 }) {
@@ -145,7 +164,7 @@ function QuickScoreTab({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!user) { setError("You must be logged in."); return; }
+    if (!user) { setError("Upload needs a signed-in account. Guest mode can score a locally created resume."); return; }
     setIsUploading(true);
     setError(null);
     try {
@@ -161,11 +180,11 @@ function QuickScoreTab({
   };
 
   const handleScore = async () => {
-    if (!user) { setError("You must be logged in."); return; }
-
     let payload: { resume_id?: string; resume?: ResumePayload } = {};
 
-    if (activeResumeId) {
+    if (isGuest && resume) {
+      payload = { resume: resumeToPayload(resume) };
+    } else if (activeResumeId) {
       payload = { resume_id: activeResumeId };
     } else {
       // Fall back to draft from localStorage
@@ -386,10 +405,12 @@ const JD_MATCH_SCORE_LABELS = [
 
 function JdMatchTab({
   user,
+  isGuest,
   resume,
   resumeId,
 }: {
   user: ReturnType<typeof useAuth>["user"];
+  isGuest: boolean;
   resume: ReturnType<typeof useResume>["resume"];
   resumeId: string | null;
 }) {
@@ -406,7 +427,7 @@ function JdMatchTab({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!user) { setError("You must be logged in."); return; }
+    if (!user) { setError("Upload needs a signed-in account. Guest mode can use a locally created resume."); return; }
     setIsUploading(true);
     setError(null);
     try {
@@ -425,7 +446,6 @@ function JdMatchTab({
     e.preventDefault();
     setError(null);
 
-    if (!user) { setError("You must be logged in."); return; }
     if (!jobDescriptionText.trim() && !jobLink.trim()) {
       setError("Paste a job description or provide a job link.");
       return;
@@ -435,10 +455,13 @@ function JdMatchTab({
     let activeResumePayload: ResumePayload | undefined;
 
     if (resumeSource === "upload") {
+      if (isGuest) { setError("PDF upload needs a signed-in account. Switch to saved resume for guest mode."); return; }
       if (!uploadedId) { setError("Upload a resume PDF first."); return; }
       activeResumeId = uploadedId;
     } else {
-      if (resumeId) {
+      if (isGuest && resume) {
+        activeResumePayload = resumeToPayload(resume);
+      } else if (resumeId) {
         activeResumeId = resumeId;
       } else {
         const draft = typeof window !== "undefined" ? localStorage.getItem("resumeBuilderDraft") : null;

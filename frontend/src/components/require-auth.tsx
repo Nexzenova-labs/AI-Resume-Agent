@@ -11,12 +11,13 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
-    }
+    // Guest mode enabled: do not redirect to login even if no user
+    // if (!isLoading && !user) {
+    //   router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+    // }
   }, [isLoading, pathname, router, user]);
 
-  if (isLoading || !user) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
         Loading workspace...

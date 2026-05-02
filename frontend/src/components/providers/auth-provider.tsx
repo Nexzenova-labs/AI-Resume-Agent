@@ -17,6 +17,7 @@ import { authService } from "@/services/auth-service";
 
 type AuthContextValue = {
   user: User | null;
+  isGuest: boolean;
   isLoading: boolean;
   error: string | null;
   logout: () => void;
@@ -85,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       user,
+      isGuest: !isLoading && !user,
       isLoading,
       error,
       logout,

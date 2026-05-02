@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Resume } from "@/lib/types";
+import { useAuth } from "@/components/providers/auth-provider";
+import { guestResumeStore } from "@/lib/guest-resumes";
 import { resumeService } from "@/services/resume-service";
 import { useResume } from "@/components/providers/resume-provider";
 
@@ -75,9 +77,11 @@ function fmtDate(iso: string | null | undefined): string {
 
 function RenameCell({
   resume,
+  isGuest,
   onRenamed,
 }: {
   resume: Resume;
+  isGuest: boolean;
   onRenamed: (id: string, title: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -93,7 +97,9 @@ function RenameCell({
     }
     setSaving(true);
     try {
-      const updated = await resumeService.rename(resume.id, trimmed);
+      const updated = isGuest
+        ? guestResumeStore.rename(resume.id, trimmed)
+        : await resumeService.rename(resume.id, trimmed);
       onRenamed(resume.id, updated.title);
     } catch {
       setValue(resume.title);
@@ -143,9 +149,11 @@ function RenameCell({
 
 function DeleteButton({
   resumeId,
+  isGuest,
   onDeleted,
 }: {
   resumeId: string;
+  isGuest: boolean;
   onDeleted: (id: string) => void;
 }) {
   const [phase, setPhase] = useState<"idle" | "confirm" | "deleting">("idle");
@@ -153,7 +161,11 @@ function DeleteButton({
   const handleDelete = async () => {
     setPhase("deleting");
     try {
-      await resumeService.delete(resumeId);
+      if (isGuest) {
+        guestResumeStore.delete(resumeId);
+      } else {
+        await resumeService.delete(resumeId);
+      }
       onDeleted(resumeId);
     } catch {
       setPhase("idle");
@@ -203,11 +215,13 @@ function DeleteButton({
 
 function ResumeRow({
   resume,
+  isGuest,
   onLoad,
   onDeleted,
   onRenamed,
 }: {
   resume: Resume;
+  isGuest: boolean;
   onLoad: (r: Resume) => void;
   onDeleted: (id: string) => void;
   onRenamed: (id: string, title: string) => void;
@@ -229,7 +243,7 @@ function ResumeRow({
 
       {/* Name + date */}
       <div className="flex-1 min-w-0">
-        <RenameCell resume={resume} onRenamed={onRenamed} />
+        <RenameCell resume={resume} isGuest={isGuest} onRenamed={onRenamed} />
         <p className="text-xs text-slate-400 mt-0.5">
           Updated {fmtDate(resume.updated_at)}
         </p>
@@ -260,7 +274,7 @@ function ResumeRow({
         </button>
 
         {/* Delete */}
-        <DeleteButton resumeId={resume.id} onDeleted={onDeleted} />
+        <DeleteButton resumeId={resume.id} isGuest={isGuest} onDeleted={onDeleted} />
       </div>
     </motion.div>
   );
@@ -274,6 +288,7 @@ export function ResumeVaultView({
   onOpenEditor?: () => void;
 }) {
   const { setResume } = useResume();
+  const { isGuest } = useAuth();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -284,14 +299,14 @@ export function ResumeVaultView({
     setLoading(true);
     setError(null);
     try {
-      const all = await resumeService.list();
+      const all = isGuest ? guestResumeStore.list() : await resumeService.list();
       setResumes(all);
     } catch {
       setError("Could not load resumes. Make sure the backend is running.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isGuest]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -405,6 +420,7 @@ export function ResumeVaultView({
                 <ResumeRow
                   key={r.id}
                   resume={r}
+                  isGuest={isGuest}
                   onLoad={handleLoad}
                   onDeleted={handleDeleted}
                   onRenamed={handleRenamed}

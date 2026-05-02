@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import type { Resume, ResumePayload } from "@/lib/types";
 
 export const resumeService = {
@@ -38,20 +39,23 @@ export const resumeService = {
     return apiRequest<void>(`/api/resume/${resumeId}`, { method: "DELETE" });
   },
 
-  upload(file: File) {
+  async upload(file: File) {
     const formData = new FormData();
     formData.append("file", file);
 
     // Cannot use apiRequest here because it forces Content-Type: application/json
     const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-    return fetch(`${baseUrl}/api/resume/upload`, {
+    const { data: { session } } = await createClient().auth.getSession();
+    const response = await fetch(`${baseUrl}/api/resume/upload`, {
       method: "POST",
       body: formData,
-      credentials: "include",
-    }).then(async (res) => {
-      if (!res.ok) throw new Error("Upload failed.");
-      return res.json() as Promise<Resume>;
+      headers: session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : undefined,
     });
+
+    if (!response.ok) throw new Error("Upload failed. Please sign in and try again.");
+    return response.json() as Promise<Resume>;
   },
 
   /**
