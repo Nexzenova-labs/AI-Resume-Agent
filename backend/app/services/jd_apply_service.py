@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
+from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +22,7 @@ class JdApplyService:
 
     # ── public entry point ────────────────────────────────────────────────────
 
-    async def process(self, *, payload: JdApplyRequest, user: User) -> JdApplyResponse:
+    async def process(self, *, payload: JdApplyRequest, user: Optional[User]) -> JdApplyResponse:
         base_resume = await self._resolve_resume(payload=payload, user=user)
 
         # Step 1: run all LLM tailoring concurrently — no DB access here
@@ -42,7 +43,7 @@ class JdApplyService:
     # ── helpers ───────────────────────────────────────────────────────────────
 
     async def _resolve_resume(
-        self, *, payload: JdApplyRequest, user: User
+        self, *, payload: JdApplyRequest, user: Optional[User]
     ) -> ResumeBase:
         if payload.resume:
             return payload.resume
@@ -51,6 +52,12 @@ class JdApplyService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Provide either a resume_id or a resume payload.",
+            )
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Guest users must provide a resume payload, not a resume_id.",
             )
 
         db_resume = await self._repo.get_by_id_for_user(
@@ -83,37 +90,41 @@ class JdApplyService:
         jd_text: str,
         index: int,
         *,
-        user: User,
+        user: Optional[User],
     ) -> ModifiedResumeResult:
-        """DB write — called sequentially so the shared session is never raced."""
-        date_str = datetime.now().strftime("%b %d")
-        title = f"{diff.job_title} — JD Apply ({date_str})"
+        """DB write for authenticated users; guests skip persistence."""
+        saved_id: Optional[str] = None
 
-        resume_data = tailored.model_dump()
-        resume_data.pop("source_type", None)
+        if user is not None:
+            date_str = datetime.now().strftime("%b %d")
+            title = f"{diff.job_title} — JD Apply ({date_str})"
 
-        db_obj = Resume(
-            user_id=user.id,
-            title=title,
-            status="draft",
-            source_type="jd_apply",
-            template=resume_data.get("template", "modern-impact"),
-            layout=resume_data.get("layout") or [],
-            personal_info=resume_data.get("personal_info") or {},
-            experience=resume_data.get("experience") or [],
-            education=resume_data.get("education") or [],
-            skills=resume_data.get("skills") or [],
-            tools=resume_data.get("tools") or [],
-            projects=resume_data.get("projects") or [],
-            custom_sections=resume_data.get("custom_sections") or [],
-        )
-        saved = await self._repo.create(db_obj)
+            resume_data = tailored.model_dump()
+            resume_data.pop("source_type", None)
+
+            db_obj = Resume(
+                user_id=user.id,
+                title=title,
+                status="draft",
+                source_type="jd_apply",
+                template=resume_data.get("template", "modern-impact"),
+                layout=resume_data.get("layout") or [],
+                personal_info=resume_data.get("personal_info") or {},
+                experience=resume_data.get("experience") or [],
+                education=resume_data.get("education") or [],
+                skills=resume_data.get("skills") or [],
+                tools=resume_data.get("tools") or [],
+                projects=resume_data.get("projects") or [],
+                custom_sections=resume_data.get("custom_sections") or [],
+            )
+            saved = await self._repo.create(db_obj)
+            saved_id = saved.id
 
         return ModifiedResumeResult(
             jd_index=index,
             jd_text=jd_text,
             job_title=diff.job_title,
-            saved_resume_id=saved.id,
+            saved_resume_id=saved_id,
             modified_resume=tailored,
             added_skills=diff.added_skills,
             added_tools=diff.added_tools,

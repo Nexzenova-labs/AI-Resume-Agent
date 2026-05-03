@@ -152,6 +152,7 @@ function QuickScoreTab({
   resumeId: string | null;
 }) {
   const [uploadedId, setUploadedId] = useState<string | null>(null);
+  const [uploadedPayload, setUploadedPayload] = useState<ResumePayload | null>(null);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isScoring, setIsScoring] = useState(false);
@@ -164,13 +165,16 @@ function QuickScoreTab({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!user) { setError("Upload needs a signed-in account. Guest mode can score a locally created resume."); return; }
     setIsUploading(true);
     setError(null);
     try {
       const uploaded = await resumeService.upload(file);
-      setUploadedId(uploaded.id);
       setUploadedName(file.name);
+      if (isGuest) {
+        setUploadedPayload(uploaded);
+      } else {
+        setUploadedId(uploaded.id);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
@@ -182,7 +186,9 @@ function QuickScoreTab({
   const handleScore = async () => {
     let payload: { resume_id?: string; resume?: ResumePayload } = {};
 
-    if (isGuest && resume) {
+    if (uploadedPayload) {
+      payload = { resume: uploadedPayload };
+    } else if (isGuest && resume) {
       payload = { resume: resumeToPayload(resume) };
     } else if (activeResumeId) {
       payload = { resume_id: activeResumeId };
@@ -420,6 +426,7 @@ function JdMatchTab({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedId, setUploadedId] = useState<string | null>(null);
+  const [uploadedPayload, setUploadedPayload] = useState<ResumePayload | null>(null);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [resumeSource, setResumeSource] = useState<"saved" | "upload">("saved");
@@ -427,13 +434,16 @@ function JdMatchTab({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!user) { setError("Upload needs a signed-in account. Guest mode can use a locally created resume."); return; }
     setIsUploading(true);
     setError(null);
     try {
       const uploaded = await resumeService.upload(file);
-      setUploadedId(uploaded.id);
       setUploadedName(file.name);
+      if (isGuest) {
+        setUploadedPayload(uploaded);
+      } else {
+        setUploadedId(uploaded.id);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
@@ -455,9 +465,13 @@ function JdMatchTab({
     let activeResumePayload: ResumePayload | undefined;
 
     if (resumeSource === "upload") {
-      if (isGuest) { setError("PDF upload needs a signed-in account. Switch to saved resume for guest mode."); return; }
-      if (!uploadedId) { setError("Upload a resume PDF first."); return; }
-      activeResumeId = uploadedId;
+      if (isGuest) {
+        if (!uploadedPayload) { setError("Upload a resume PDF first."); return; }
+        activeResumePayload = uploadedPayload;
+      } else {
+        if (!uploadedId) { setError("Upload a resume PDF first."); return; }
+        activeResumeId = uploadedId;
+      }
     } else {
       if (isGuest && resume) {
         activeResumePayload = resumeToPayload(resume);

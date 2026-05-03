@@ -22,7 +22,7 @@ class ModifiedResumeResult(BaseModel):
     jd_index: int
     jd_text: str
     job_title: str
-    saved_resume_id: str            # ID of the persisted resume in the vault
+    saved_resume_id: Optional[str] = None  # None for guest users (not persisted)
     modified_resume: ResumeBase
     # Diff info — what was added (for frontend diff highlighting)
     added_skills: list[str] = []

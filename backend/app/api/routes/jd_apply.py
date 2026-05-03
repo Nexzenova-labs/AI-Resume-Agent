@@ -1,9 +1,9 @@
-from typing import Annotated
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_optional_user
 from app.db.session import get_db_session
 from app.models.user import User
 from app.schemas.jd_apply import JdApplyRequest, JdApplyResponse
@@ -16,7 +16,6 @@ router = APIRouter(prefix="/jd-apply", tags=["jd-apply"])
 @router.post("/parse-jd")
 async def parse_jd_file(
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
 ) -> dict:
     """Extract plain text from a JD uploaded as PDF or .txt file."""
     content = await file.read()
@@ -43,7 +42,7 @@ async def parse_jd_file(
 async def process_jd_apply(
     payload: JdApplyRequest,
     session: Annotated[AsyncSession, Depends(get_db_session)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[Optional[User], Depends(get_optional_user)],
 ) -> JdApplyResponse:
     """Analyze a resume against multiple job descriptions and generate tailored versions."""
     return await JdApplyService(session).process(payload=payload, user=current_user)

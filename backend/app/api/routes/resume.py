@@ -1,9 +1,11 @@
-from typing import Annotated
+from datetime import datetime, timezone
+from typing import Annotated, Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_user
 from app.db.session import get_db_session
 from app.models.user import User
 from app.schemas.resume import ResumeCreate, ResumeResponse, ResumeUpdate
@@ -41,9 +43,9 @@ async def create_resume(
 async def upload_resume(
     file: UploadFile = File(...),
     session: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
 ) -> ResumeResponse:
-    """Parse a PDF resume and store it as a new resume record."""
+    """Parse a PDF resume. Authenticated users get it saved; guests receive parsed data without persistence."""
     file_bytes = await file.read()
 
     raw_text = extract_text_from_pdf(file_bytes)
@@ -54,8 +56,8 @@ async def upload_resume(
         status="draft",
         source_type="uploaded",
         personal_info={
-            "full_name": parsed.full_name or current_user.full_name,
-            "email": parsed.email or current_user.email,
+            "full_name": parsed.full_name or (current_user.full_name if current_user else ""),
+            "email": parsed.email or (current_user.email if current_user else ""),
             "phone": parsed.phone,
             "location": parsed.location,
             "summary": parsed.summary,
@@ -68,7 +70,18 @@ async def upload_resume(
         projects=parsed.projects,
     )
 
-    return await ResumeService(session).create_resume(payload=payload, user=current_user)
+    if current_user:
+        return await ResumeService(session).create_resume(payload=payload, user=current_user)
+
+    # Guest: return parsed resume without saving to DB
+    now = datetime.now(timezone.utc)
+    return ResumeResponse(
+        id=str(uuid4()),
+        user_id="guest",
+        created_at=now,
+        updated_at=now,
+        **payload.model_dump(),
+    )
 
 
 @router.get("/{resume_id}", response_model=ResumeResponse)

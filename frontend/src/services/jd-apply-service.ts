@@ -12,8 +12,8 @@ export type JdApplyResultItem = {
   jd_text: string;
   /** Extracted / inferred job title from the JD */
   job_title: string;
-  /** ID of the resume that was persisted in the vault (source_type = "jd_apply") */
-  saved_resume_id: string;
+  /** ID of the persisted resume in the vault — null for guest users */
+  saved_resume_id: string | null;
   modified_resume: ResumePayload;
   /** Keywords that were added — used for diff highlighting in the UI */
   added_skills: string[];

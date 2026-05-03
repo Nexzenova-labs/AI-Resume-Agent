@@ -142,6 +142,8 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
             ...createEmptyResumePayload(),
             id: `draft-${crypto.randomUUID()}`,
             user_id: user.id,
+            status: "draft",
+            source_type: "builder",
             created_at: timestamp,
             updated_at: timestamp,
           };

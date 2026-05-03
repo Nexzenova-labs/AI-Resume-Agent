@@ -5,13 +5,11 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { resumeService } from "@/services/resume-service";
 import { useResume } from "@/components/providers/resume-provider";
-import { useAuth } from "@/components/providers/auth-provider";
 
 type Step = "choose" | "upload" | "uploading" | "success";
 
 export function ResumeUploadView({ onEdit, onAts }: { onEdit?: () => void; onAts?: () => void } = {}) {
   const router = useRouter();
-  const { isGuest } = useAuth();
   const { createDraftResume, setResume } = useResume();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>("choose");
@@ -38,10 +36,6 @@ export function ResumeUploadView({ onEdit, onAts }: { onEdit?: () => void; onAts
 
   const handleUpload = async () => {
     if (!selectedFile) return;
-    if (isGuest) {
-      setError("Resume upload needs a signed-in account. You can still create and save a resume locally as a guest.");
-      return;
-    }
     setStep("uploading");
     setError(null);
     try {
@@ -223,7 +217,7 @@ export function ResumeUploadView({ onEdit, onAts }: { onEdit?: () => void; onAts
               disabled={!selectedFile}
               className="mt-6 w-full rounded-2xl bg-slate-900 py-4 text-base font-bold text-white shadow-xl shadow-slate-900/20 transition hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
             >
-              {isGuest ? "Sign in to upload, or create manually" : "Upload & Continue →"}
+              Upload & Continue →
             </button>
           </motion.div>
         )}

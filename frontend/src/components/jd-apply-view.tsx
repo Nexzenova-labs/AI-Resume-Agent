@@ -381,29 +381,33 @@ function JdInputRow({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function JDApplyView() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { resume, resumeId, setResume } = useResume();
-  const [tab, setTab]                     = useState<Tab>("jd");
-  const [jds, setJds]                     = useState<string[]>([""]);
-  const [result, setResult]               = useState<JdApplyResult | null>(null);
-  const [isLoading, setIsLoading]         = useState(false);
-  const [error, setError]                 = useState<string | null>(null);
-  const [uploadedId, setUploadedId]       = useState<string | null>(null);
-  const [uploadedName, setUploadedName]   = useState<string | null>(null);
-  const [isUploading, setIsUploading]     = useState(false);
-  const [resumeSource, setResumeSource]   = useState<"saved" | "upload">("saved");
+  const [tab, setTab]                           = useState<Tab>("jd");
+  const [jds, setJds]                           = useState<string[]>([""]);
+  const [result, setResult]                     = useState<JdApplyResult | null>(null);
+  const [isLoading, setIsLoading]               = useState(false);
+  const [error, setError]                       = useState<string | null>(null);
+  const [uploadedId, setUploadedId]             = useState<string | null>(null);
+  const [uploadedName, setUploadedName]         = useState<string | null>(null);
+  const [uploadedPayload, setUploadedPayload]   = useState<ResumePayload | null>(null);
+  const [isUploading, setIsUploading]           = useState(false);
+  const [resumeSource, setResumeSource]         = useState<"saved" | "upload">("saved");
 
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!user) { setError("You must be logged in."); return; }
     setIsUploading(true);
     setError(null);
     try {
       const uploaded = await resumeService.upload(file);
-      setUploadedId(uploaded.id);
       setUploadedName(file.name);
       setResumeSource("upload");
+      if (isGuest) {
+        setUploadedPayload(uploaded);
+      } else {
+        setUploadedId(uploaded.id);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
@@ -415,7 +419,6 @@ export function JDApplyView() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!user) { setError("You must be logged in."); return; }
     const validJds = jds.map(j => j.trim()).filter(Boolean);
     if (validJds.length === 0) { setError("Paste at least one job description."); return; }
 
@@ -423,8 +426,13 @@ export function JDApplyView() {
     let activeResumePayload: ResumePayload | undefined;
 
     if (resumeSource === "upload") {
-      if (!uploadedId) { setError("Upload a resume PDF first."); return; }
-      activeResumeId = uploadedId;
+      if (isGuest) {
+        if (!uploadedPayload) { setError("Upload a resume PDF first."); return; }
+        activeResumePayload = uploadedPayload;
+      } else {
+        if (!uploadedId) { setError("Upload a resume PDF first."); return; }
+        activeResumeId = uploadedId;
+      }
     } else {
       if (resumeId) {
         activeResumeId = resumeId;
@@ -460,13 +468,14 @@ export function JDApplyView() {
 
   const handleEditResult = async (res: JdApplyResultItem) => {
     try {
+      if (!res.saved_resume_id) throw new Error("no saved id");
       const loaded = await resumeService.get(res.saved_resume_id);
       setResume(loaded);
     } catch {
       setResume({
         ...res.modified_resume,
-        id: res.saved_resume_id,
-        user_id: user?.id ?? "",
+        id: res.saved_resume_id ?? crypto.randomUUID(),
+        user_id: user?.id ?? "guest",
         title: res.job_title,
         status: "draft",
         source_type: "jd_apply",

@@ -16,6 +16,26 @@ from app.repositories.user_repository import UserRepository
 settings = get_settings()
 
 
+async def get_optional_user(
+    request: Request,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    authorization: Annotated[Optional[str], Header(alias="Authorization")] = None,
+    access_token: Annotated[Optional[str], Cookie()] = None,
+    refresh_token: Annotated[Optional[str], Cookie()] = None,
+) -> Optional[User]:
+    """Like get_current_user but returns None instead of raising 401 for unauthenticated requests."""
+    try:
+        return await get_current_user(
+            request=request,
+            session=session,
+            authorization=authorization,
+            access_token=access_token,
+            refresh_token=refresh_token,
+        )
+    except HTTPException:
+        return None
+
+
 async def get_current_user(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_db_session)],
