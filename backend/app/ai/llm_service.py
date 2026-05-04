@@ -474,7 +474,11 @@ def _heuristic_tailor(resume: ResumeBase, jd_text: str) -> TailoringDiff:
     terms: set[str] = set()
     for t in tokens:
         t = t.strip(".-/")
-        if len(t) >= 3 and t not in _BROAD_STOPWORDS and not t.isdigit():
+        # Only keep alphabetic/hyphenated terms of reasonable length
+        if (len(t) >= 4
+                and t not in _BROAD_STOPWORDS
+                and not t.isdigit()
+                and re.match(r"^[a-z][a-z\-\/\+\#\.]*$", t)):
             terms.add(t)
     for phrase in _DISPLAY:
         if " " in phrase and re.search(r"\b" + re.escape(phrase) + r"\b", text_lower):
@@ -567,6 +571,7 @@ def apply_tailoring(resume: ResumeBase, diff: TailoringDiff) -> ResumeBase:
     data["experience"] = data.get("experience") or []
     data["education"] = data.get("education") or []
     data["projects"] = data.get("projects") or []
+    # Preserve custom sections (Certifications, Languages, Soft Skills) from original resume
     data["custom_sections"] = data.get("custom_sections") or []
 
     # Update summary

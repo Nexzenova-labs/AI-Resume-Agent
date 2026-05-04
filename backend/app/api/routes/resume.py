@@ -68,6 +68,7 @@ async def upload_resume(
         skills=parsed.skills,
         tools=parsed.tools,
         projects=parsed.projects,
+        custom_sections=parsed.custom_sections,
     )
 
     if current_user:

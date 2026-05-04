@@ -22,10 +22,12 @@ SECTION_RE = re.compile(
     r"|education|academic background|qualifications|educational"
     r"|skills|technical skills|core skills|key skills|competencies|expertise"
     r"|tools|technologies|tech stack|tools & technologies"
-    r"|projects|personal projects|portfolio|side projects|key projects"
-    r"|summary|professional summary|profile|objective|about me"
+    r"|projects|personal projects|portfolio|side projects|key projects|academic projects"
+    r"|summary|professional summary|profile|objective|about me|profile summary"
     r"|certifications|certificates|awards|achievements|honors"
-    r"|contact|links|social"
+    r"|languages|language skills"
+    r"|soft skills|interpersonal skills"
+    r"|contact|links|social|website"
     r")\s*[:\-–]?\s*$",
     re.IGNORECASE,
 )
@@ -84,6 +86,7 @@ class ParsedResume:
     experience: list[dict[str, Any]] = field(default_factory=list)
     education: list[dict[str, Any]] = field(default_factory=list)
     projects: list[dict[str, Any]] = field(default_factory=list)
+    custom_sections: list[dict[str, Any]] = field(default_factory=list)
 
 
 # ── PDF text extraction ───────────────────────────────────────────────────────
@@ -209,8 +212,33 @@ def parse_resume_from_text(raw_text: str) -> ParsedResume:
     parsed.education = _parse_education(edu_lines)
 
     # ── Projects → structured entries ─────────────────────────────────────────
-    proj_lines = get_section_lines("project", "portfolio")
+    proj_lines = get_section_lines("project", "portfolio", "academic")
     parsed.projects = _parse_projects(proj_lines)
+
+    # ── Custom sections (certifications, languages, soft skills) ──────────────
+    def _extract_custom_section(display_name: str, *keys: str) -> None:
+        raw_lines = get_section_lines(*keys)
+        if not raw_lines:
+            return
+        items: list[str] = []
+        for ln in raw_lines:
+            clean = BULLET_RE.sub("", ln).strip()
+            if clean and len(clean) > 1:
+                items.append(clean)
+        if items:
+            parsed.custom_sections.append({"name": display_name, "items": items})
+
+    _extract_custom_section("Certifications", "certifications", "certificates", "awards", "achievements", "honors")
+    _extract_custom_section("Languages", "languages", "language skills")
+    _extract_custom_section("Soft Skills", "soft skills", "interpersonal skills")
+
+    # Website / links section — merge into parsed.links
+    link_lines = get_section_lines("website", "links", "social", "contact")
+    for ln in link_lines:
+        for m in URL_RE.finditer(ln):
+            url = m.group().rstrip(".,)")
+            if url not in parsed.links:
+                parsed.links.append(url)
 
     return parsed
 
