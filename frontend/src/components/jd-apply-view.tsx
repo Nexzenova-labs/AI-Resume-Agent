@@ -63,7 +63,7 @@ function buildPrintHtml(resume: ResumePayload, jobTitle: string): string {
 <h1>${esc(pi.full_name)}</h1>
 <div class="contact">
   ${[pi.email, pi.phone, pi.location].filter(Boolean).map(esc).join(" · ")}
-  ${(pi.links ?? []).length > 0 ? " · " + pi.links.map(esc).join(" · ") : ""}
+  ${(pi.links ?? []).length > 0 ? " · " + (pi.links ?? []).map(url => `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" style="color:#4f46e5;text-decoration:none">${esc(url)}</a>`).join(" · ") : ""}
 </div>
 ${pi.summary ? `<h2>Professional Summary</h2><p class="summary">${esc(pi.summary)}</p>` : ""}
 ${skills ? `<h2>Skills</h2><p class="skill-list">${skills}</p>` : ""}

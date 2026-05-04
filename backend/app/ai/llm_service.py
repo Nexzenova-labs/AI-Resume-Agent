@@ -158,6 +158,11 @@ _DISPLAY: dict[str, str] = {
     "network monitoring": "Network Monitoring",
     "security patch management": "Security Patch Management",
     "antivirus": "Antivirus",
+    # Networking
+    "lan": "LAN", "wan": "WAN", "vpn": "VPN", "dns": "DNS", "dhcp": "DHCP",
+    "tcp/ip": "TCP/IP", "tcp": "TCP",
+    # Security forensics tools
+    "ftk": "FTK Imager", "qroc": "QROC", "qradar": "QRadar",
 }
 
 _KNOWN_TOOLS_LOWER: set[str] = {
@@ -526,9 +531,21 @@ def _heuristic_tailor(resume: ResumeBase, jd_text: str) -> TailoringDiff:
     missing_skills = missing_skills[:20]
 
     # 2. ALL-CAPS acronyms from JD (SIEM, VPN, IDS, SOC, SPLUNK…)
-    skip_caps = {"THE", "AND", "FOR", "WITH", "YOU", "OUR", "ARE", "NOT",
-                 "ALL", "ANY", "WILL", "HAVE", "FROM", "BEEN", "UG", "PG",
-                 "KEY", "ROLE", "FULL", "TIME", "TYPE", "GOOD", "ABLE"}
+    skip_caps = {
+        "THE", "AND", "FOR", "WITH", "YOU", "OUR", "ARE", "NOT",
+        "ALL", "ANY", "WILL", "HAVE", "FROM", "BEEN", "UG", "PG",
+        "KEY", "ROLE", "FULL", "TIME", "TYPE", "GOOD", "ABLE",
+        # Geography / common non-skill caps
+        "UK", "US", "EU", "USA", "OR", "AT", "IN", "ON", "OF", "AN",
+        # Job-posting boilerplate
+        "ANALYST", "ENGINEER", "DEVELOPER", "MANAGER", "CONSULTANT",
+        "SENIOR", "JUNIOR", "ASSOCIATE", "PRINCIPAL", "LEAD", "HEAD",
+        "KNOWLEDGE", "ABILITY", "EXPERIENCE", "BACKGROUND",
+        "DESCRIPTION", "OVERVIEW", "CATEGORY", "DEPARTMENT",
+        "EMPLOYMENT", "EDUCATION", "GRADUATE", "STANDARD",
+        "OPERATING", "TRAINING", "MONITORING", "REPORTING",
+        "MULTIPLE", "VARIOUS", "REQUIRED", "PREFERRED",
+    }
     acronym_skills: list[str] = []
     for m in re.finditer(r'\b([A-Z]{2,}(?:[/-][A-Z]+)?)\b', jd_text):
         w = m.group(1)

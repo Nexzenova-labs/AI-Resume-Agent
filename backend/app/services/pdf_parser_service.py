@@ -306,9 +306,12 @@ def _parse_experience(lines: list[str]) -> list[dict[str, Any]]:
                 current["highlights"].append(bullet)
 
         elif current and not is_bullet and len(line) > 5:
-            # Could be company name on a separate line, or a description sentence
+            # Could be company name, continuation of a wrapped bullet, or description
             if not current["company"] and (has_company or len(line) < 60):
                 current["company"] = line
+            elif current["highlights"]:
+                # Continuation of the last wrapped bullet line (PDF line-wrap)
+                current["highlights"][-1] = current["highlights"][-1] + " " + line
             elif not current["description"] and len(line) > 20:
                 current["description"] = line
             elif len(line) > 15:
@@ -452,7 +455,10 @@ def _parse_projects(lines: list[str]) -> list[dict[str, Any]]:
                 if bullet:
                     current["highlights"].append(bullet)
             elif len(line) > 10:
-                if not current["description"]:
+                if current["highlights"]:
+                    # Continuation of last wrapped bullet line
+                    current["highlights"][-1] = current["highlights"][-1] + " " + line
+                elif not current["description"]:
                     current["description"] = line
                 else:
                     current["highlights"].append(line)
