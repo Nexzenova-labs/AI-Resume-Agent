@@ -132,6 +132,32 @@ _DISPLAY: dict[str, str] = {
     "redux": "Redux", "zustand": "Zustand",
     "jest": "Jest", "vitest": "Vitest", "cypress": "Cypress",
     "langsmith": "LangSmith", "crewai": "CrewAI",
+    # Cybersecurity
+    "siem": "SIEM", "splunk": "Splunk", "arcsight": "ArcSight", "qradar": "QRadar",
+    "sentinel": "Microsoft Sentinel", "ids": "IDS", "ips": "IPS", "vpn": "VPN",
+    "soc": "SOC Analyst", "soar": "SOAR", "edr": "EDR", "xdr": "XDR",
+    "nessus": "Nessus", "qualys": "Qualys", "crowdstrike": "CrowdStrike",
+    "palo alto": "Palo Alto Networks", "fortinet": "Fortinet", "wireshark": "Wireshark",
+    "vulnerability management": "Vulnerability Management",
+    "incident response": "Incident Response",
+    "threat intelligence": "Threat Intelligence",
+    "penetration testing": "Penetration Testing",
+    "security operations": "Security Operations",
+    "cybersecurity": "Cybersecurity", "cyber security": "Cyber Security",
+    "network security": "Network Security",
+    "information security": "Information Security",
+    "security monitoring": "Security Monitoring",
+    "anomaly detection": "Anomaly Detection",
+    "intrusion detection": "Intrusion Detection",
+    "security event management": "Security Event Management",
+    "threat hunting": "Threat Hunting",
+    "malware analysis": "Malware Analysis",
+    "digital forensics": "Digital Forensics",
+    "soc analyst": "SOC Analyst",
+    "log analysis": "Log Analysis",
+    "network monitoring": "Network Monitoring",
+    "security patch management": "Security Patch Management",
+    "antivirus": "Antivirus",
 }
 
 _KNOWN_TOOLS_LOWER: set[str] = {
@@ -176,6 +202,11 @@ _STOP_WORDS: set[str] = {
     "experience", "background", "skills", "skill", "tools", "tool",
     "requirements", "qualifications", "responsibilities",
 }
+
+_KNOWN_TOOLS_LOWER.update({
+    "splunk", "arcsight", "qradar", "nessus", "qualys", "crowdstrike",
+    "wireshark", "fortinet", "sentinel", "tenable", "rapid7",
+})
 
 
 def _display(term: str) -> str:
@@ -467,65 +498,67 @@ _BROAD_STOPWORDS: set[str] = {
 
 
 def _heuristic_tailor(resume: ResumeBase, jd_text: str) -> TailoringDiff:
-    text_lower = jd_text.lower()
-    clean = re.sub(r"[^\w\s\-\/\+\#\.]", " ", text_lower)
-    tokens = clean.split()
-
-    terms: set[str] = set()
-    for t in tokens:
-        t = t.strip(".-/")
-        # Only keep alphabetic/hyphenated terms of reasonable length
-        if (len(t) >= 4
-                and t not in _BROAD_STOPWORDS
-                and not t.isdigit()
-                and re.match(r"^[a-z][a-z\-\/\+\#\.]*$", t)):
-            terms.add(t)
-    for phrase in _DISPLAY:
-        if " " in phrase and re.search(r"\b" + re.escape(phrase) + r"\b", text_lower):
-            terms.add(phrase)
-
-    _, tech_tools = extract_jd_keywords(jd_text)
+    """
+    Keyword-injection fallback. Only adds curated vocab terms + ALL-CAPS
+    acronyms from the JD — never raw English verbs or generic words.
+    """
     resume_text = _get_resume_text(resume)
-
     existing_skills_lower = {s.lower() for s in (resume.skills or [])}
-    existing_tools_lower = {t.lower() for t in (resume.tools or [])}
+    existing_tools_lower  = {t.lower() for t in (resume.tools  or [])}
+
+    # 1. Curated skills/tools from our vocabulary
+    jd_skills, jd_tools = extract_jd_keywords(jd_text)
 
     missing_tools: list[str] = []
-    seen_tools: set[str] = set(existing_tools_lower)
-    for t in tech_tools:
-        if t.lower() not in resume_text and t.lower() not in seen_tools:
+    seen: set[str] = set(existing_tools_lower)
+    for t in jd_tools:
+        if t.lower() not in resume_text and t.lower() not in seen:
             missing_tools.append(t)
-            seen_tools.add(t.lower())
+            seen.add(t.lower())
     missing_tools = missing_tools[:15]
 
-    tools_set = seen_tools | {t.lower() for t in missing_tools}
-    skills_to_add: list[str] = []
-    seen_skills: set[str] = set(existing_skills_lower)
-    for term in sorted(terms):
-        t_l = term.lower()
-        if t_l in resume_text or t_l in seen_skills or t_l in tools_set:
-            continue
-        display = _display(t_l) if t_l in _DISPLAY else term.title()
-        d_l = display.lower()
-        if d_l not in seen_skills:
-            skills_to_add.append(display)
-            seen_skills.add(d_l)
-    skills_to_add = skills_to_add[:30]
+    seen |= existing_skills_lower
+    missing_skills: list[str] = []
+    for s in jd_skills:
+        if s.lower() not in resume_text and s.lower() not in seen:
+            missing_skills.append(s)
+            seen.add(s.lower())
+    missing_skills = missing_skills[:20]
 
-    existing_summary = _get_existing_summary(resume)
+    # 2. ALL-CAPS acronyms from JD (SIEM, VPN, IDS, SOC, SPLUNK…)
+    skip_caps = {"THE", "AND", "FOR", "WITH", "YOU", "OUR", "ARE", "NOT",
+                 "ALL", "ANY", "WILL", "HAVE", "FROM", "BEEN", "UG", "PG",
+                 "KEY", "ROLE", "FULL", "TIME", "TYPE", "GOOD", "ABLE"}
+    acronym_skills: list[str] = []
+    for m in re.finditer(r'\b([A-Z]{2,}(?:[/-][A-Z]+)?)\b', jd_text):
+        w = m.group(1)
+        if w not in skip_caps and 2 <= len(w) <= 10 and w.lower() not in resume_text and w.lower() not in seen:
+            display = _display(w.lower()) if w.lower() in _DISPLAY else w
+            acronym_skills.append(display)
+            seen.add(w.lower())
+    acronym_skills = list(dict.fromkeys(acronym_skills))[:10]
+
+    all_new_skills = missing_skills + acronym_skills
+    all_new_tools  = missing_tools
+
+    # 3. Summary — only reference real domain terms, never raw JD words
     job_title = _extract_jd_title(jd_text)
-    top_kw = ", ".join((missing_tools + skills_to_add)[:10])
-    summary = (
-        f"{existing_summary} Experienced in {top_kw} with a strong background aligned to {job_title} roles."
-        if existing_summary else
-        f"Experienced professional with skills in {top_kw}, aligned to {job_title} roles."
-    )
+    existing_summary = _get_existing_summary(resume)
+    key_terms = (all_new_tools + all_new_skills)[:8]
+    if key_terms:
+        kw_str = ", ".join(key_terms)
+        if existing_summary:
+            summary = f"{existing_summary} Additional domain expertise includes {kw_str}."
+        else:
+            summary = f"Experienced professional with domain expertise in {kw_str}, targeting {job_title} roles."
+    else:
+        summary = existing_summary
 
     return TailoringDiff(
         job_title=job_title,
         summary=summary,
-        added_skills=skills_to_add,
-        added_tools=missing_tools,
+        added_skills=all_new_skills,
+        added_tools=all_new_tools,
         experience_enhancements=[],
     )
 

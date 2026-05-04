@@ -392,7 +392,6 @@ export function JDApplyView() {
   const [uploadedName, setUploadedName]         = useState<string | null>(null);
   const [uploadedPayload, setUploadedPayload]   = useState<ResumePayload | null>(null);
   const [isUploading, setIsUploading]           = useState(false);
-  const [resumeSource, setResumeSource]         = useState<"saved" | "upload">("saved");
 
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -402,7 +401,6 @@ export function JDApplyView() {
     try {
       const uploaded = await resumeService.upload(file);
       setUploadedName(file.name);
-      setResumeSource("upload");
       if (isGuest) {
         setUploadedPayload(uploaded);
       } else {
@@ -425,27 +423,12 @@ export function JDApplyView() {
     let activeResumeId: string | undefined;
     let activeResumePayload: ResumePayload | undefined;
 
-    if (resumeSource === "upload") {
-      if (isGuest) {
-        if (!uploadedPayload) { setError("Upload a resume PDF first."); return; }
-        activeResumePayload = uploadedPayload;
-      } else {
-        if (!uploadedId) { setError("Upload a resume PDF first."); return; }
-        activeResumeId = uploadedId;
-      }
+    if (isGuest) {
+      if (!uploadedPayload) { setError("Upload a resume PDF first."); return; }
+      activeResumePayload = uploadedPayload;
     } else {
-      if (resumeId) {
-        activeResumeId = resumeId;
-      } else {
-        const draft = typeof window !== "undefined" ? localStorage.getItem("resumeBuilderDraft") : null;
-        if (draft) {
-          try { activeResumePayload = JSON.parse(draft); } catch { /* ignore */ }
-        }
-        if (!activeResumePayload) {
-          setError("No saved resume found. Upload a PDF or save one from the Resume tab.");
-          return;
-        }
-      }
+      if (!uploadedId) { setError("Upload a resume PDF first."); return; }
+      activeResumeId = uploadedId;
     }
 
     setIsLoading(true);
@@ -554,33 +537,12 @@ export function JDApplyView() {
                 <p className="mt-1 text-sm text-slate-500">Choose the base resume. All your existing data is preserved.</p>
               </div>
 
-              <div className="flex gap-2">
-                {(["saved", "upload"] as const).map((src) => (
-                  <button
-                    key={src}
-                    type="button"
-                    onClick={() => setResumeSource(src)}
-                    className={`flex-1 rounded-2xl border py-2.5 text-sm font-medium transition ${
-                      resumeSource === src
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {src === "saved" ? (resume ? "Saved Resume" : "Draft Resume") : "Upload PDF"}
-                  </button>
-                ))}
-              </div>
-
-              {resumeSource === "saved" ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                  {resume ? `✓ Using: "${resume.title}"` : "Using draft from Resume Builder"}
-                </div>
-              ) : uploadedId ? (
+              {(uploadedId || uploadedPayload) ? (
                 <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                   <span className="truncate max-w-[200px]">✓ {uploadedName}</span>
                   <button
                     type="button"
-                    onClick={() => { setUploadedId(null); setUploadedName(null); }}
+                    onClick={() => { setUploadedId(null); setUploadedPayload(null); setUploadedName(null); }}
                     className="text-xs font-semibold text-rose-500 ml-2"
                   >
                     Remove
@@ -593,7 +555,8 @@ export function JDApplyView() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
                   </div>
-                  <span>{isUploading ? "Uploading…" : "Click to upload PDF"}</span>
+                  <span>{isUploading ? "Uploading…" : "Click to upload PDF resume"}</span>
+                  <span className="text-xs text-slate-400">PDF only</span>
                   <input type="file" accept=".pdf" className="hidden" onChange={handleResumeUpload} disabled={isUploading} />
                 </label>
               )}
