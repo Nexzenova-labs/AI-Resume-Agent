@@ -130,6 +130,18 @@ function KeywordBadge({ label, isNew }: { label: string; isNew: boolean }) {
 
 // ─── Result card with diff view ───────────────────────────────────────────────
 
+function MethodBadge({ method }: { method: string }) {
+  const isAI = method !== "heuristic";
+  const label = isAI ? `AI · ${method.replace("gemini-", "Gemini ").replace("openai", "GPT-4o")}` : "Keyword Match";
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold whitespace-nowrap ${
+      isAI ? "bg-violet-100 text-violet-700" : "bg-amber-100 text-amber-700"
+    }`}>
+      {isAI ? "✦" : "◈"} {label}
+    </span>
+  );
+}
+
 function ResultCard({ res, onEdit }: { res: JdApplyResultItem; onEdit: (res: JdApplyResultItem) => void }) {
   const r = res.modified_resume;
   const addedSkillsSet  = new Set((res.added_skills  ?? []).map(s => s.toLowerCase()));
@@ -152,12 +164,7 @@ function ResultCard({ res, onEdit }: { res: JdApplyResultItem; onEdit: (res: JdA
           <p className="text-xs text-slate-400 mt-0.5">{r.personal_info?.full_name ?? "—"}</p>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-700 whitespace-nowrap">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-            Saved
-          </span>
+          <MethodBadge method={res.tailoring_method ?? "heuristic"} />
           {totalAdded > 0 && (
             <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600">
               +{totalAdded} keywords
@@ -250,12 +257,7 @@ function DownloadCard({ res, onEdit }: { res: JdApplyResultItem; onEdit: (res: J
             <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">+{totalAdded} keywords injected</p>
           )}
         </div>
-        <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-700 whitespace-nowrap">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          Saved
-        </span>
+        <MethodBadge method={res.tailoring_method ?? "heuristic"} />
       </div>
 
       <p className="text-xs leading-5 text-slate-500 line-clamp-3 italic">

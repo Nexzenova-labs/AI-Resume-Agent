@@ -129,4 +129,5 @@ class JdApplyService:
             added_skills=diff.added_skills,
             added_tools=diff.added_tools,
             keywords_injected=len(diff.added_skills) + len(diff.added_tools),
+            tailoring_method=diff.method,
         )

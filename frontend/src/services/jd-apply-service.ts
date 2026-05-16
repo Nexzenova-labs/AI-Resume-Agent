@@ -10,15 +10,14 @@ export type JdApplyPayload = {
 export type JdApplyResultItem = {
   jd_index: number;
   jd_text: string;
-  /** Extracted / inferred job title from the JD */
   job_title: string;
-  /** ID of the persisted resume in the vault — null for guest users */
   saved_resume_id: string | null;
   modified_resume: ResumePayload;
-  /** Keywords that were added — used for diff highlighting in the UI */
   added_skills: string[];
   added_tools: string[];
   keywords_injected: number;
+  /** Which AI path ran: "gemini-2.0-flash" | "gemini-2.0-flash-lite" | "openai" | "heuristic" */
+  tailoring_method: string;
 };
 
 export type JdApplyResult = {

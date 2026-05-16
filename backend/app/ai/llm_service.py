@@ -35,6 +35,7 @@ class TailoringDiff:
     added_tools: list[str] = field(default_factory=list)
     experience_enhancements: list[ExperienceEnhancement] = field(default_factory=list)
     added_project: Optional[dict] = None
+    method: str = "heuristic"  # "gemini-2.0-flash", "gemini-2.0-flash-lite", "openai", "heuristic"
 
 
 # ─── Display-casing lookup for common tech terms ──────────────────────────────
@@ -424,29 +425,63 @@ def _parse_llm_response(raw: str, jd_text: str) -> TailoringDiff:
 
 # ─── Gemini tailoring (primary) ───────────────────────────────────────────────
 
+# Model priority: best quality first, lite as 429 fallback
+_GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash-lite"]
+
+
 async def _gemini_tailor(resume: ResumeBase, jd_text: str, api_key: str) -> TailoringDiff:
     from google import genai
     from google.genai import types
 
     client = genai.Client(api_key=api_key)
-    user_message = _build_user_message(resume, jd_text)
-    full_prompt = f"{_SYSTEM_PROMPT}\n\n{user_message}"
+    full_prompt = f"{_SYSTEM_PROMPT}\n\n{_build_user_message(resume, jd_text)}"
 
-    loop = asyncio.get_running_loop()
-    response = await loop.run_in_executor(
-        None,
-        lambda: client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=full_prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.3,
-                response_mime_type="application/json",
-            ),
-        ),
-    )
+    last_exc: Exception = Exception("Gemini unavailable")
 
-    raw = response.text or "{}"
-    return _parse_llm_response(raw, jd_text)
+    for model in _GEMINI_MODELS:
+        for attempt in range(3):  # up to 3 retries per model with backoff
+            try:
+                loop = asyncio.get_running_loop()
+                response = await loop.run_in_executor(
+                    None,
+                    lambda m=model: client.models.generate_content(
+                        model=m,
+                        contents=full_prompt,
+                        config=types.GenerateContentConfig(
+                            temperature=0.3,
+                            response_mime_type="application/json",
+                        ),
+                    ),
+                )
+                raw = response.text or "{}"
+                diff = _parse_llm_response(raw, jd_text)
+                diff.method = model
+                logger.info("Gemini tailoring succeeded with model=%s attempt=%d", model, attempt)
+                return diff
+
+            except Exception as exc:
+                last_exc = exc
+                err_str = str(exc).lower()
+                is_rate_limit = any(x in err_str for x in ("429", "quota", "resource_exhausted", "rate_limit", "too many"))
+                is_forbidden  = any(x in err_str for x in ("403", "forbidden", "permission", "api_key"))
+
+                if is_forbidden:
+                    # Key issue — no point retrying
+                    logger.error("Gemini API key error (403/forbidden): %s", exc)
+                    raise
+
+                if is_rate_limit:
+                    logger.warning("Gemini rate limit on model=%s attempt=%d: %s", model, attempt, exc)
+                    if attempt < 2:
+                        await asyncio.sleep(2 ** attempt)  # 1 s, 2 s
+                        continue
+                    break  # exhausted retries on this model → try next model
+
+                # Unexpected error — log and re-raise
+                logger.error("Gemini unexpected error model=%s: %s", model, exc, exc_info=True)
+                raise
+
+    raise last_exc
 
 
 # ─── OpenAI tailoring (secondary) ────────────────────────────────────────────
@@ -591,20 +626,23 @@ class LLMService:
         gemini_key = (self._settings.gemini_api_key or "").strip()
         openai_key = (self._settings.openai_api_key or "").strip()
 
-        # Gemini is the primary path
         if gemini_key:
             try:
-                return await _gemini_tailor(resume=resume, jd_text=jd_text, api_key=gemini_key)
+                diff = await _gemini_tailor(resume=resume, jd_text=jd_text, api_key=gemini_key)
+                logger.info("Used AI model: %s — keywords_injected=%d", diff.method, len(diff.added_skills) + len(diff.added_tools))
+                return diff
             except Exception as exc:
-                logger.error("Gemini tailoring failed: %s", exc, exc_info=True)
+                logger.error("All Gemini models failed, trying OpenAI fallback: %s", exc)
 
         if openai_key:
             try:
-                return await _openai_tailor(resume=resume, jd_text=jd_text, api_key=openai_key)
+                diff = await _openai_tailor(resume=resume, jd_text=jd_text, api_key=openai_key)
+                diff.method = "openai"
+                return diff
             except Exception as exc:
                 logger.error("OpenAI tailoring failed: %s", exc, exc_info=True)
 
-        logger.warning("No AI keys available — using heuristic tailoring.")
+        logger.warning("No AI keys available or all failed — using heuristic tailoring.")
         return _heuristic_tailor(resume=resume, jd_text=jd_text)
 
 

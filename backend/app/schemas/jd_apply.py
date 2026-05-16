@@ -28,6 +28,7 @@ class ModifiedResumeResult(BaseModel):
     added_skills: list[str] = []
     added_tools: list[str] = []
     keywords_injected: int = 0
+    tailoring_method: str = "heuristic"  # which path actually ran
 
 
 class JdApplyResponse(BaseModel):
